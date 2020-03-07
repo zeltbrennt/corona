@@ -17,5 +17,6 @@ old_data %>%
   write_csv(paste0(Sys.Date(), "-infizierte.csv"))
 
 # todo:
-# - create plots
+# - push repo to raspberry
+# - setup git & R 
 # - automate git update
