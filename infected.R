@@ -4,8 +4,8 @@ library(tidyr)
 library(dplyr)
 library(readr)
 
-url <- "https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/Fallzahlen.html"
-temp <- read_html(url) %>% html_table()
+temp <- read_html("https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/Fallzahlen.html") %>% 
+  html_table()
 
 new_row <- temp[[1]][,1:2] %>%
   pivot_wider(names_from = Bundesland, values_from = `Fälle`) %>%
