@@ -30,7 +30,4 @@ ggsave(filename = "verlauf.jpg",
        width = 20,
        height = 12,
        units = "cm")
-# todo:
-# - push repo to raspberry
-# - setup git & R 
-# - automate git update
+
