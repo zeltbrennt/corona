@@ -4,6 +4,7 @@ library(tidyr)
 library(dplyr)
 library(readr)
 
+setwd("/home/pi/corona")
 temp <- read_html("https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/Fallzahlen.html") %>% 
   html_table() 
 
