@@ -32,7 +32,7 @@ pl <- new_data %>%
   ggplot(aes(x = Datum, y = `Anzahl Infizierte`, color = Bundesland)) +
     geom_line() +
     labs(title = "Covid-19 Infektionen in Deutschland",
-         caption = paste("Quelle: RKI | Stand:", Sys.Date()),
+         caption = paste("Quelle: RKI | Stand:", Sys.time()),
          x = "")
 ggsave(filename = "verlauf.jpg",
        plot = pl,

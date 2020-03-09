@@ -2,8 +2,9 @@
 
 #git checkout master
 
-Rscript infected.R
+Rscript /home/pi/corona/infected.R
 
-git add -A
-git commit -m "update data"
-git push origin dev
+cd /home/pi/corona && /usr/bin/git add -A
+cd /home/pi/corona && /usr/bin/git commit -m "update data"
+cd /home/pi/corona && /usr/bin/git push origin dev
+
