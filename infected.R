@@ -10,8 +10,17 @@ temp <- read_html("https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/
 new_row <- temp[[1]][,1:2] %>%
   pivot_wider(names_from = Bundesland, values_from = `Fälle`) %>%
   mutate(Datum = Sys.Date())
-new_data <- read_csv(paste0("archive/", Sys.Date()-1, "-infizierte.csv")) %>%
-  bind_rows(new_row) 
+
+file <- list.files(pattern = ".csv")
+old_data <- read_csv(file)
+if (grepl(as.character(Sys.Date()), file)) {
+  new_data <- old_data
+  new_data[nrow(new_data),] <- new_row
+} else {
+  file.copy(from = file, to = paste0("archive/", file))
+  file.remove(file)
+  new_data <- bind_rows(old_data, new_row)
+}
 # store new data in long format
 write_csv(new_data, paste0(Sys.Date(), "-infizierte.csv"))
 
