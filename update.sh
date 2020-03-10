@@ -5,4 +5,4 @@
 cd /home/pi/corona
 /usr/bin/git add -A
 /usr/bin/git commit -m "update data"
-/usr/bin/git push origin dev
+/usr/bin/git push origin master
