@@ -5,8 +5,9 @@ Diese Repo dient dazu, den Verlauf zu protokollieren, da zwar eine Historie
 in PDF Dokumenten erstellt, aber keine CSV zur verfügung gestellt wird. Diese
 Lücke soll hier geschlossen werden.
 
-Jeden Tag 12:00 werden daher die aktuellen Zahlen, wie vom RKI veröffentlicht, abgefragt und in eine
-CSV eingetragen. Für einen schnellen Überblick über den Verlauf dient diese ad-hoc erstellte Grafik.
+Jeden Tag jeweils 10:00, 13:00, und 16:00 Uhr werden daher die aktuellen Zahlen, sofern vom RKI veröffentlicht, abgefragt und in eine
+CSV eingetragen. Für einen schnellen Überblick über den Verlauf dient diese ad-hoc erstellte Grafik. 
 
 ![COVID-19-Verlauf nach Bundesland](https://github.com/zeltbrennt/corona/blob/master/verlauf.jpg "COVID-19 Verlauf")
 
+todo: Todesfälle 
