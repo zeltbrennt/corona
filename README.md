@@ -5,9 +5,10 @@ Diese Repo dient dazu, den Verlauf zu protokollieren, da zwar eine Historie
 in PDF Dokumenten erstellt, aber keine CSV zur verfügung gestellt wird. Diese
 Lücke soll hier geschlossen werden.
 
-Jeden Tag jeweils 10:00, 13:00, und 16:00 Uhr werden daher die aktuellen Zahlen, sofern vom RKI veröffentlicht, abgefragt und in eine
-CSV eingetragen. Für einen schnellen Überblick über den Verlauf dient diese ad-hoc erstellte Grafik. 
+Seit dem 09.03.2020 berichtet das RKI nurnoch elektronisch übermittelte Fälle, daher kann es zu Artefakten kommen, 
+bis die elektronisch gemeldetetn Fälle mit den vorab abgekündigten Fällen aufgeholt haben.
 
-![COVID-19-Verlauf nach Bundesland](https://github.com/zeltbrennt/corona/blob/master/verlauf.jpg "COVID-19 Verlauf")
+Weiterhin ist nicht eindeutig, wie das RKI ihre Tabelle erstellt. Da sich das alle paar Tage ändert, wird ab dem 12.03.2020
+die auf der RKI Seite erstellte Karte als Dump jeweils eine CSV gespeichert. Eine weitere Aufarbeitung erfolgt dann unregelmäßig 
+manuel.
 
-todo: Todesfälle 
