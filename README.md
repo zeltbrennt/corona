@@ -9,6 +9,5 @@ Seit dem 09.03.2020 berichtet das RKI nurnoch elektronisch übermittelte Fälle,
 bis die elektronisch gemeldetetn Fälle mit den vorab abgekündigten Fällen aufgeholt haben.
 
 Weiterhin ist nicht eindeutig, wie das RKI ihre Tabelle erstellt. Da sich das alle paar Tage ändert, wird ab dem 12.03.2020
-die auf der RKI Seite erstellte Karte als Dump jeweils eine CSV gespeichert. Eine weitere Aufarbeitung erfolgt dann unregelmäßig 
-manuel.
+die auf der RKI Seite erstellte Karte als Dump jeweils eine CSV gespeichert. 
 

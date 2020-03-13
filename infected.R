@@ -3,12 +3,10 @@ library(rvest)
 setwd("/home/pi/corona")
 temp <- read_html("https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/Fallzahlen.html") 
 temp <- html_table(temp) 
-# until RKI does not break itself every 5 minutes, the table will be dumped as is
 
-file <- list.files(pattern = ".csv")
-file.copy(file, paste0("archive/", file))
-file.remove(file)
-write.csv(temp[[1]], paste0("dump-", Sys.Date(), ".csv"))
+# as long as format is not consitent through the week, the table will be dumped as is
+
+write.csv(temp[[1]], paste0("dump/", Sys.Date(), ".csv"))
 
 # update_csv <- function(pattern, new_row) {
 #   file <- list.files(pattern = pattern)
