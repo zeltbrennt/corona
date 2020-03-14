@@ -1,12 +1,31 @@
 library(rvest)
+library(dplyr)
+library(readr)
 
 setwd("/home/pi/corona")
-temp <- read_html("https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/Fallzahlen.html") 
-temp <- html_table(temp) 
-
+temp <- read_html("https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/Fallzahlen.html") %>%
+  html_table() 
+write.csv(temp, paste0("dump/", Sys.Date(), ".csv"))
 # as long as format is not consitent through the week, the table will be dumped as is
 
-write.csv(temp[[1]], paste0("dump/", Sys.Date(), ".csv"))
+new_data <- temp[[1]][,1:3] 
+names(new_data)<- c("Bundesland", "Infizierte", "Tote")
+new_data <- new_data %>%
+  mutate(Tote = str_replace(Tote, "\\.", ""),
+         Tote = str_extract(Infizierte, "(?<=\\()\\d*"),
+         Tote = ifelse(is.na(Tote), 0, Tote),
+         Tote = as.numeric(Tote),
+         Infizierte = str_replace(Infizierte, "\\.", ""),
+         Infizierte = str_extract(Infizierte, "^\\d*"),
+         Infizierte = as.numeric(Infizierte),
+         Datum = Sys.Date()) %>%
+  filter(Bundesland != "Gesamt")
+file <- list.files(pattern = ".csv")
+file.copy(from = file, to = paste0("archive/", file))
+read_csv(file) %>%
+  bind_rows(new_data) %>% 
+  write_csv(paste0("RKI-", Sys.Date(), ".csv"))
+file.remove(file)
 
 # update_csv <- function(pattern, new_row) {
 #   file <- list.files(pattern = pattern)
@@ -28,29 +47,3 @@ write.csv(temp[[1]], paste0("dump/", Sys.Date(), ".csv"))
 #   return(new_data)
 # }
 # 
-# new_infected <- temp[[1]][,1:2] %>%
-#   pivot_wider(names_from = Bundesland, values_from = `Fälle`) %>%
-#   mutate(Datum = Sys.Date())
-# new_dead <- temp[[1]][,c(1,3)] %>%
-#   pivot_wider(names_from = Bundesland, values_from = `Todesfälle`) %>%
-#   mutate(Datum = Sys.Date())
-# 
-# # write csv and keep results for plotting
-# new_infected <- update_csv("infizierte", new_infected)
-# new_dead <- update_csv("tote", new_dead)
-# 
-# pl <- new_infected %>%
-#   pivot_longer(cols = -c(Datum, Gesamt), 
-#                names_to = "Bundesland", 
-#                values_to = "Anzahl Infizierte") %>%
-#   ggplot(aes(x = Datum, y = `Anzahl Infizierte`, color = Bundesland)) +
-#   geom_line() +
-#   labs(title = "Covid-19 Infektionen in Deutschland",
-#        caption = paste("Quelle: RKI | Letzte Abfrage:", Sys.time()),
-#        x = "")
-# ggsave(filename = "verlauf.jpg",
-#        plot = pl,
-#        width = 20,
-#        height = 12,
-#        units = "cm")
-
