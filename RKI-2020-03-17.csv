@@ -255,9 +255,8 @@ Datum,Bundesland,Infizierte,Tote
 2020-03-16,Sachsen-Anhalt,77,0
 2020-03-16,Schleswig-Holstein,123,0
 2020-03-16,Thüringen,55,0
-2020-03-17,,NA,0
-2020-03-17,Baden-Württemberg,1479,0
-2020-03-17,Bayern,1109,0
+2020-03-17,Baden-Württemberg,1479,2
+2020-03-17,Bayern,1109,4
 2020-03-17,Berlin,345,0
 2020-03-17,Brandenburg,73,0
 2020-03-17,Bremen,57,0
@@ -265,7 +264,7 @@ Datum,Bundesland,Infizierte,Tote
 2020-03-17,Hessen,373,0
 2020-03-17,Mecklenburg-Vorpommern,45,0
 2020-03-17,Niedersachsen,325,0
-2020-03-17,Nordrhein-Westfalen,2105,0
+2020-03-17,Nordrhein-Westfalen,2105,6
 2020-03-17,Rheinland-Pfalz,442,0
 2020-03-17,Saarland,75,0
 2020-03-17,Sachsen,182,0

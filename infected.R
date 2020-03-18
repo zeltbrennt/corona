@@ -9,18 +9,16 @@ temp <- read_html("https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/
 write.csv(temp, paste0("dump/", Sys.Date(), ".csv"))
 # as long as format is not consitent through the week, the table will be dumped as is
 
-new_data <- temp[[1]][,1:3] 
+new_data <- temp[[1]][,c(1,2,5)] 
 names(new_data)<- c("Bundesland", "Infizierte", "Tote")
 new_data <- new_data %>%
   mutate(Tote = str_replace(Tote, "\\.", ""),
-         Tote = str_extract(Infizierte, "(?<=\\()\\d*"),
          Tote = ifelse(is.na(Tote), 0, Tote),
          Tote = as.numeric(Tote),
          Infizierte = str_replace(Infizierte, "\\.", ""),
-         Infizierte = str_extract(Infizierte, "^\\d*"),
          Infizierte = as.numeric(Infizierte),
          Datum = Sys.Date()) %>%
-  filter(Bundesland != "Gesamt")
+  filter(!(Bundesland %in% c("Gesamt", "")))
 file <- list.files(pattern = ".csv")
 file.copy(from = file, to = paste0("archive/", file))
 read_csv(file) %>%
