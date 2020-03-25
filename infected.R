@@ -13,7 +13,7 @@ new_data <- temp[[1]][,c(1,2,5)]
 names(new_data)<- c("Bundesland", "Infizierte", "Tote")
 new_data <- new_data %>%
   mutate(Tote = str_replace(Tote, "\\.", ""),
-         Tote = ifelse(is.na(Tote), 0, Tote),
+         Tote = ifelse(Tote == "", 0, Tote),
          Tote = as.numeric(Tote),
          Infizierte = str_replace(Infizierte, "\\.", ""),
          Infizierte = as.numeric(Infizierte),
