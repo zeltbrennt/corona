@@ -19,6 +19,22 @@ new_data <- new_data %>%
          Infizierte = as.numeric(Infizierte),
          Datum = Sys.Date()) %>%
   filter(!(Bundesland %in% c("Gesamt", "")))
+new_data$Bundesland <- c("Baden-Württemberg",
+                         "Bayern",
+                         "Berlin",
+                         "Brandenburg",
+                         "Bremen",
+                         "Hamburg",
+                         "Hessen",
+                         "Mecklenburg-Vorpommern",
+                         "Niedersachsen",
+                         "Nordrhein-Westfalen",
+                         "Rheinland-Pfalz",
+                         "Saarland",
+                         "Sachsen",
+                         "Sachsen-Anhalt",
+                         "Schlesweig-Holstein",
+                         "Thüringen")
 file <- list.files(pattern = ".csv")
 file.copy(from = file, to = paste0("archive/", file))
 read_csv(file) %>%
