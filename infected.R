@@ -33,7 +33,7 @@ new_data$Bundesland <- c("Baden-Württemberg",
                          "Saarland",
                          "Sachsen",
                          "Sachsen-Anhalt",
-                         "Schlesweig-Holstein",
+                         "Schleswig-Holstein",
                          "Thüringen")
 file <- list.files(pattern = ".csv")
 file.copy(from = file, to = paste0("archive/", file))
