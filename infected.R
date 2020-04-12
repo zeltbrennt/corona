@@ -2,63 +2,78 @@ library(rvest)
 library(dplyr)
 library(readr) 
 library(stringr)
+library(tidyr) 
+library(ggplot2)
 
 setwd("/home/pi/corona")
 temp <- read_html("https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/Fallzahlen.html") %>%
   html_table() 
 write.csv(temp, paste0("dump/", Sys.Date(), ".csv"))
-# as long as format is not consitent through the week, the table will be dumped as is
+# census in 100k
+bl <- c("Baden-Württemberg"      = 110.70,
+        "Bayern"                 = 130.77,
+        "Berlin"                 = 36.45,
+        "Brandenburg"            = 25.12,
+        "Bremen"                 = 6.83,
+        "Hamburg"                = 16.41,
+        "Hessen"                 = 62.66,
+        "Mecklenburg-Vorpommern" = 16.10,
+        "Niedersachsen"          = 79.82,
+        "Nordrhein-Westfalen"    = 179.33,
+        "Rheinland-Pfalz"        = 40.85,
+        "Saarland"               = 9.91,
+        "Sachsen"                = 40.78,
+        "Sachsen-Anhalt"         = 22.08,
+        "Schleswig-Holstein"     = 28.97,
+        "Thüringen"              = 21.43)
 
 new_data <- temp[[1]][,c(1,2,5)] 
-names(new_data)<- c("Bundesland", "Infizierte", "Tote")
+names(new_data) <- c("Bundesland", "Infizierte", "Tote")
 new_data <- new_data %>%
-  mutate(Tote = str_replace(Tote, "\\.", ""),
-         Tote = ifelse(Tote == "", 0, Tote),
-         Tote = as.numeric(Tote),
-         Infizierte = str_replace(Infizierte, "\\.", ""),
-         Infizierte = as.numeric(Infizierte),
-         Datum = Sys.Date()) %>%
-  filter(!(Bundesland %in% c("Gesamt", "")))
-new_data$Bundesland <- c("Baden-Württemberg",
-                         "Bayern",
-                         "Berlin",
-                         "Brandenburg",
-                         "Bremen",
-                         "Hamburg",
-                         "Hessen",
-                         "Mecklenburg-Vorpommern",
-                         "Niedersachsen",
-                         "Nordrhein-Westfalen",
-                         "Rheinland-Pfalz",
-                         "Saarland",
-                         "Sachsen",
-                         "Sachsen-Anhalt",
-                         "Schleswig-Holstein",
-                         "Thüringen")
+  filter(!(Bundesland %in% c("Gesamt", ""))) %>%
+  mutate(Tote = as.numeric(str_replace(Tote, "\\.", "")),
+         Infizierte = as.numeric(str_replace(Infizierte, "\\.", "")),
+         Datum = Sys.Date())
+new_data$Bundesland <- names(bl)
 file <- list.files(pattern = ".csv")
 file.copy(from = file, to = paste0("archive/", file))
-read_csv(file) %>%
-  bind_rows(new_data) %>% 
-  write_csv(paste0("RKI-", Sys.Date(), ".csv"))
+history <- read_csv(file) %>%
+  bind_rows(new_data)  
+write_csv(history, paste0("RKI-", Sys.Date(), ".csv"))
 file.remove(file)
-
-# update_csv <- function(pattern, new_row) {
-#   file <- list.files(pattern = pattern)
-#   if (length(file) == 0){
-#     new_data <- new_row
-#   } else {
-#     old_data = read_csv(file)
-#     if (grepl(as.character(Sys.Date()), file)) {
-#       new_data <- old_data
-#       new_data[nrow(new_data),] <- new_row
-#     } else {
-#       if (!dir.exists(paste0("archive/", pattern))) dir.create(paste0("archive/", pattern))
-#       file.copy(from = file, to = paste0("archive/", pattern, "/", file))
-#       file.remove(file)
-#       new_data <- bind_rows(old_data, new_row)
-#     }
-#   }
-#   write_csv(new_data, paste0(Sys.Date(), "-", pattern, ".csv"))
-#   return(new_data)
-# }
-# 
+ 
+# plot
+plot <- history %>%
+  pivot_longer(cols = c(Infizierte, Tote),
+               names_to = "Messwert",
+               values_to = "Anzahl") %>%
+  mutate(Relative_Anzahl = Anzahl / bl[Bundesland]) %>%
+  ggplot(aes(x = Datum,
+             y = Relative_Anzahl,
+             color = Bundesland,
+             group = Bundesland)) +
+  geom_point() +
+  geom_line() +
+  scale_color_manual(values = c("#2f4f4f",
+                                "#a0522d",
+                                "#006400",
+                                "#000080",
+                                "#ff0000",
+                                "#00ced1",
+                                "#ffa500",
+                                "#ffff00",
+                                "#00ff00",
+                                "#0000ff",
+                                "#ff00ff", 
+                                "#1e90ff",
+                                "#dda0dd",
+                                "#90ee90",
+                                "#ff1493",
+                                "#ffe4b5")) +
+  labs(title = "Kumulierte Covid-19 Infektionen nach Bevölkerung je Bundesland",
+       y = "Anzahl pro 100.000 Einwohner",
+       caption = paste0("Einwohner: Destatis 2018 | Covid-19: RKI ", 
+                        format(Sys.Date() -1, "%d.%m.%Y"))) +
+  facet_wrap(~Messwert, nrow = 2, scales = "free_y") 
+ggsave("plot.jpg", plot = plot,
+       width = 10, height = 7)
