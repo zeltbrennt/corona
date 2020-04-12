@@ -46,13 +46,16 @@ file.remove(file)
 plot <- history %>%
   pivot_longer(cols = c(Infizierte, Tote),
                names_to = "Messwert",
+               values_to = "absolut") %>%
+  mutate(`pro 100k EW` = absolut / bl[Bundesland]) %>%
+  pivot_longer(cols = c(absolut, `pro 100k EW`),
+               names_to = "count",
                values_to = "Anzahl") %>%
-  mutate(Relative_Anzahl = Anzahl / bl[Bundesland]) %>%
   ggplot(aes(x = Datum,
-             y = Relative_Anzahl,
+             y = Anzahl,
              color = Bundesland,
              group = Bundesland)) +
-  geom_point() +
+  geom_point(size = 0.5) +
   geom_line() +
   scale_color_manual(values = c("#2f4f4f",
                                 "#a0522d",
@@ -70,10 +73,10 @@ plot <- history %>%
                                 "#90ee90",
                                 "#ff1493",
                                 "#ffe4b5")) +
-  labs(title = "Kumulierte Covid-19 Infektionen nach Bevölkerung je Bundesland",
-       y = "Anzahl pro 100.000 Einwohner",
+  labs(title = "Kumulierte Covid-19 Fälle nach Bevölkerung je Bundesland",
+       y = "Anzahl",
        caption = paste0("Einwohner: Destatis 2018 | Covid-19: RKI ", 
                         format(Sys.Date() -1, "%d.%m.%Y"))) +
-  facet_wrap(~Messwert, nrow = 2, scales = "free_y") 
+  facet_wrap(Messwert~count, scales = "free_y") 
 ggsave("plot.jpg", plot = plot,
-       width = 10, height = 7)
+       width = 10, height = 6)
