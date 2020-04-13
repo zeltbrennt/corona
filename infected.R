@@ -76,7 +76,7 @@ plot <- history %>%
   labs(title = "Kumulierte Covid-19 Fälle nach Bevölkerung je Bundesland",
        y = "Anzahl",
        caption = paste0("Einwohner: Destatis 2018 | Covid-19: RKI ", 
-                        format(Sys.Date() -1, "%d.%m.%Y"))) +
+                        format(Sys.Date(), "%d.%m.%Y"))) +
   facet_wrap(Messwert~count, scales = "free_y") 
 ggsave("plot.jpg", plot = plot,
        width = 10, height = 6)
