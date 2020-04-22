@@ -1,7 +1,6 @@
 library(rvest)
 library(dplyr)
 library(readr) 
-library(stringr)
 library(tidyr) 
 library(ggplot2)
 
@@ -31,8 +30,8 @@ new_data <- temp[[1]][,c(1,2,5)]
 names(new_data) <- c("Bundesland", "Infizierte", "Tote")
 new_data <- new_data %>%
   filter(!(Bundesland %in% c("Gesamt", ""))) %>%
-  mutate(Tote = as.numeric(str_replace(Tote, "\\.", "")),
-         Infizierte = as.numeric(str_replace(Infizierte, "\\.", "")),
+  mutate(Tote = as.numeric(stringr::str_replace(Tote, "\\.", "")),
+         Infizierte = as.numeric(stringr::str_replace(Infizierte, "\\.", "")),
          Datum = Sys.Date())
 new_data$Bundesland <- names(bl)
 file <- list.files(pattern = ".csv")
@@ -44,7 +43,9 @@ file.remove(file)
  
 # plot
 plot <- history %>%
-  pivot_longer(cols = c(Infizierte, Tote),
+  mutate(Neuinfektionen = ifelse(Infizierte - lag(Infizierte, n = 16) < 0, NA_integer_, 
+                                 Infizierte - lag(Infizierte, n = 16))) %>%
+  pivot_longer(cols = c(Neuinfektionen, Infizierte, Tote),
                names_to = "Messwert",
                values_to = "absolut") %>%
   mutate(`pro 100k EW` = absolut / bl[Bundesland]) %>%
@@ -55,7 +56,6 @@ plot <- history %>%
              y = Anzahl,
              color = Bundesland,
              group = Bundesland)) +
-  geom_point(size = 0.5) +
   geom_line() +
   scale_color_manual(values = c("#2f4f4f",
                                 "#a0522d",
@@ -73,10 +73,11 @@ plot <- history %>%
                                 "#90ee90",
                                 "#ff1493",
                                 "#ffe4b5")) +
-  labs(title = "Kumulierte Covid-19 Fälle nach Bevölkerung je Bundesland",
+  labs(title = "Tägliche und kumulierte Covid-19 Fälle nach Bevölkerung je Bundesland",
        y = "Anzahl",
        caption = paste0("Einwohner: Destatis 2018 | Covid-19: RKI ", 
                         format(Sys.Date(), "%d.%m.%Y"))) +
-  facet_wrap(Messwert~count, scales = "free_y") 
+  facet_wrap(forcats::fct_relevel(Messwert, "Neuinfektionen") ~count, scales = "free_y", ncol = 2) +
+  theme_light()
 ggsave("plot.jpg", plot = plot,
-       width = 10, height = 6)
+       width = 12, height = 12)
