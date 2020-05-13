@@ -43,9 +43,10 @@ file.remove(file)
  
 # plot
 plot <- history %>%
-  mutate(Neuinfektionen = ifelse(Infizierte - lag(Infizierte, n = 16) < 0, NA_integer_, 
-                                 Infizierte - lag(Infizierte, n = 16))) %>%
-  pivot_longer(cols = c(Neuinfektionen, Infizierte, Tote),
+  group_by(Bundesland) %>%
+  mutate(`Neue Fälle (7 Tage)` = Infizierte - lag(Infizierte, 7)) %>% 
+  rename("Bestätigte Fälle" = Infizierte) %>%
+  pivot_longer(cols = c(`Neue Fälle (7 Tage)`, `Bestätigte Fälle`, Tote),
                names_to = "Messwert",
                values_to = "absolut") %>%
   mutate(`pro 100k EW` = absolut / bl[Bundesland]) %>%
