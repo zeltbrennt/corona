@@ -26,7 +26,7 @@ bl <- c("Baden-Württemberg"      = 110.70,
         "Schleswig-Holstein"     = 28.97,
         "Thüringen"              = 21.43)
 
-new_data <- temp[[1]][,c(1,2,5)] 
+new_data <- temp[[1]][,c(1,2,6)] 
 names(new_data) <- c("Bundesland", "Infizierte", "Tote")
 new_data <- new_data %>%
   filter(!(Bundesland %in% c("Gesamt", ""))) %>%
