@@ -11,4 +11,6 @@ Die jeweils aktuelle Verlauf ist in der CSV im Hauptverzeichnis gespeichert. Akt
 
 Für die die Zahlen des *heutigen* Tages, bitte die Seite des RKI nutzen!
 
-![Plot](plot.jpg)
+![Verlauf](plot.jpg)
+
+![Sommerferien](plot2.jpg)
