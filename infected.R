@@ -42,6 +42,23 @@ write_csv(history, paste0("RKI-", Sys.Date(), ".csv"))
 file.remove(file)
  
 # plot
+colors <- c("#2f4f4f",
+            "#a0522d",
+            "#006400",
+            "#000080",
+            "#ff0000",
+            "#00ced1",
+            "#ffa500",
+            "#ffff00",
+            "#00ff00",
+            "#0000ff",
+            "#ff00ff", 
+            "#1e90ff",
+            "#dda0dd",
+            "#90ee90",
+            "#ff1493",
+            "#ffe4b5")
+
 plot <- history %>%
   group_by(Bundesland) %>%
   mutate(`Neue Fälle (7 Tage)` = Infizierte - lag(Infizierte, 7)) %>% 
@@ -58,22 +75,7 @@ plot <- history %>%
              color = Bundesland,
              group = Bundesland)) +
   geom_line() +
-  scale_color_manual(values = c("#2f4f4f",
-                                "#a0522d",
-                                "#006400",
-                                "#000080",
-                                "#ff0000",
-                                "#00ced1",
-                                "#ffa500",
-                                "#ffff00",
-                                "#00ff00",
-                                "#0000ff",
-                                "#ff00ff", 
-                                "#1e90ff",
-                                "#dda0dd",
-                                "#90ee90",
-                                "#ff1493",
-                                "#ffe4b5")) +
+  scale_color_manual(values = colors) +
   labs(title = "Tägliche und kumulierte Covid-19 Fälle nach Bevölkerung je Bundesland",
        y = "Anzahl",
        caption = paste0("Einwohner: Destatis 2018 | Covid-19: RKI ", 
@@ -81,4 +83,61 @@ plot <- history %>%
   facet_wrap(forcats::fct_relevel(Messwert, "Neuinfektionen") ~count, scales = "free_y", ncol = 2) +
   theme_light()
 ggsave("plot.jpg", plot = plot,
+       width = 12, height = 12)
+
+# Sommerferienzeiten in Abhängigkeit zu Neuinfektionen
+ferien <- tibble(Bundesland = unique(history$Bundesland),
+                 Begin = as.Date(c("2020-07-30",
+                                   "2020-07-27",
+                                   "2020-06-25",
+                                   "2020-06-25",
+                                   "2020-07-16",
+                                   "2020-06-25",
+                                   "2020-07-06",
+                                   "2020-06-22",
+                                   "2020-07-16",
+                                   "2020-06-29",
+                                   "2020-07-06",
+                                   "2020-07-06",
+                                   "2020-07-20",
+                                   "2020-07-16",
+                                   "2020-06-29",
+                                   "2020-07-20")),
+                 Ende = as.Date(c("2020-09-12",
+                                  "2020-09-07",
+                                  "2020-08-07",
+                                  "2020-08-07",
+                                  "2020-08-26",
+                                  "2020-08-05",
+                                  "2020-08-14",
+                                  "2020-08-01",
+                                  "2020-08-26",
+                                  "2020-08-11",
+                                  "2020-08-14",
+                                  "2020-08-14",
+                                  "2020-08-28",
+                                  "2020-08-26",
+                                  "2020-08-08",
+                                  "2020-08-29")))
+plot2 <- history %>%
+  group_by(Bundesland) %>%
+  mutate(neu = (Infizierte - lag(Infizierte , 7)) / 7) %>% 
+  ggplot(aes(x = Datum, y = neu, color = Bundesland)) +
+    geom_line() +
+    geom_rect(data = ferien,
+              inherit.aes = F,
+              aes(xmin = Begin,
+                  xmax = Ende,
+                  ymin = -Inf,
+                  ymax = Inf),
+              alpha = 0.3) +
+    facet_wrap(~Bundesland, scales = "free_y") +
+    labs(title = "Neuinfektionen nach Bundesland in Relation zu Sommerferien",
+         y = "7-Tage-Mittel der Neuinfektionen",
+         caption = paste0("Sommerferien: KMK | Covid-19: RKI ", 
+                          format(Sys.Date(), "%d.%m.%Y"))) +
+   scale_color_manual(values = colors, guide = F) +
+   theme_light()
+
+ggsave("plot2.jpg", plot = plot2,
        width = 12, height = 12)
