@@ -140,4 +140,4 @@ plot2 <- history %>%
    theme_light()
 
 ggsave("plot2.jpg", plot = plot2,
-       width = 12, height = 12)
+       width = 12, height = 10)
