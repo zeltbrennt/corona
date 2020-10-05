@@ -3478,11 +3478,11 @@ Datum,Bundesland,Infizierte,Tote
 2020-10-04,Bremen,2598,59
 2020-10-04,Hamburg,8176,272
 2020-10-04,Hessen,19788,552
-2020-10-04,Mecklenburg-Vorpommern,1220,NA
+2020-10-04,Mecklenburg-Vorpommern,1220,20
 2020-10-04,Niedersachsen,20954,690
 2020-10-04,Nordrhein-Westfalen,72581,1884
 2020-10-04,Rheinland-Pfalz,11015,256
-2020-10-04,Saarland,3380,NA
+2020-10-04,Saarland,3380,177
 2020-10-04,Sachsen,7459,239
 2020-10-04,Sachsen-Anhalt,2736,68
 2020-10-04,Schleswig-Holstein,4914,162
