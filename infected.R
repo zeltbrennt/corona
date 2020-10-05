@@ -30,8 +30,8 @@ new_data <- temp[[1]][,c(1,2,6)]
 names(new_data) <- c("Bundesland", "Infizierte", "Tote")
 new_data <- new_data %>%
   filter(!(Bundesland %in% c("Gesamt", ""))) %>%
-  mutate(Tote = as.numeric(stringr::str_replace(Tote, "\\.", "")),
-         Infizierte = as.numeric(stringr::str_replace(Infizierte, "\\.", "")),
+  mutate(Tote = as.numeric(stringr::str_remove_all(Tote, "[[:punct:][:alpha:]]")),
+         Infizierte = as.numeric(stringr::str_remove_all(Infizierte, "[[:punct:][:alpha:]]")),
          Datum = Sys.Date())
 new_data$Bundesland <- names(bl)
 file <- list.files(pattern = ".csv")
