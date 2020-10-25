@@ -1,143 +1,231 @@
-library(rvest)
+library(readr)
 library(dplyr)
-library(readr) 
-library(tidyr) 
 library(ggplot2)
+library(tidyr)
 
 setwd("/home/pi/corona")
-temp <- read_html("https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/Fallzahlen.html") %>%
-  html_table() 
-write.csv(temp, paste0("dump/", Sys.Date(), ".csv"))
-# census in 100k
-bl <- c("Baden-Württemberg"      = 110.70,
-        "Bayern"                 = 130.77,
-        "Berlin"                 = 36.45,
-        "Brandenburg"            = 25.12,
-        "Bremen"                 = 6.83,
-        "Hamburg"                = 16.41,
-        "Hessen"                 = 62.66,
-        "Mecklenburg-Vorpommern" = 16.10,
-        "Niedersachsen"          = 79.82,
-        "Nordrhein-Westfalen"    = 179.33,
-        "Rheinland-Pfalz"        = 40.85,
-        "Saarland"               = 9.91,
-        "Sachsen"                = 40.78,
-        "Sachsen-Anhalt"         = 22.08,
-        "Schleswig-Holstein"     = 28.97,
-        "Thüringen"              = 21.43)
 
-new_data <- temp[[1]][,c(1,2,6)] 
-names(new_data) <- c("Bundesland", "Infizierte", "Tote")
-new_data <- new_data %>%
-  filter(!(Bundesland %in% c("Gesamt", ""))) %>%
-  mutate(Tote = as.numeric(stringr::str_remove_all(Tote, "[[:punct:][:alpha:]]")),
-         Infizierte = as.numeric(stringr::str_remove_all(Infizierte, "[[:punct:][:alpha:]]")),
-         Datum = Sys.Date())
-new_data$Bundesland <- names(bl)
-file <- list.files(pattern = ".csv")
+# Neue Daten einlesen
+RKI_COVID19 <-  read_csv("https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.csv",
+                         col_types = cols(Altersgruppe2 = col_skip(),
+                                          Datenstand = col_date(format = "%d.%m.%Y, %H:%M Uhr"),
+                                          Meldedatum = col_date(format = "%Y/%m/%d %H:%M:%S"),
+                                          Refdatum = col_date(format = "%Y/%m/%d %H:%M:%S")))
+zensus <- read_csv("https://opendata.arcgis.com/datasets/917fc37a709542548cc3be077a786c17_0.csv",
+                   col_types = cols(.default = col_skip(),
+                                    BL = col_character(),
+                                    county = col_character(),
+                                    EWZ = col_integer(),
+                                    EWZ_BL = col_integer())) %>%
+  mutate_if(is.numeric, .funs = function(x) x / 100000) %>%
+  pivot_wider(names_from = BL, values_from = EWZ_BL) %>%
+  pivot_wider(names_from = county, values_from = EWZ) %>%
+  summarise_all(sum, na.rm = T) %>%
+  unlist()
+
+# Tabellen wegschreiben
+write.csv(RKI_COVID19, paste0("dump/", Sys.Date(), ".csv"))
+
+new_data <- RKI_COVID19 %>% 
+  group_by(Bundesland) %>% 
+  summarise(Infizierte = sum(AnzahlFall)) %>% 
+  left_join(RKI_COVID19 %>% 
+              filter(NeuerTodesfall <= 0) %>% 
+              group_by(Bundesland) %>% 
+              summarise(Tote = sum(AnzahlTodesfall))) %>%
+  mutate(Datum = Sys.Date())
+
+file <- list.files(pattern = "RKI-.*\\.csv")
 file.copy(from = file, to = paste0("archive/", file))
 history <- read_csv(file) %>%
   bind_rows(new_data)  
 write_csv(history, paste0("RKI-", Sys.Date(), ".csv"))
 file.remove(file)
- 
-# plot
-colors <- c("#2f4f4f",
-            "#a0522d",
-            "#006400",
-            "#000080",
-            "#ff0000",
-            "#00ced1",
-            "#ffa500",
-            "#ffff00",
-            "#00ff00",
-            "#0000ff",
-            "#ff00ff", 
-            "#1e90ff",
-            "#dda0dd",
-            "#90ee90",
-            "#ff1493",
-            "#ffe4b5")
 
-plot <- history %>%
-  group_by(Bundesland) %>%
-  mutate(`Neue Fälle (7 Tage)` = Infizierte - lag(Infizierte, 7)) %>% 
-  rename("Bestätigte Fälle" = Infizierte) %>%
-  pivot_longer(cols = c(`Neue Fälle (7 Tage)`, `Bestätigte Fälle`, Tote),
-               names_to = "Messwert",
-               values_to = "absolut") %>%
-  mutate(`pro 100k EW` = absolut / bl[Bundesland]) %>%
-  pivot_longer(cols = c(absolut, `pro 100k EW`),
-               names_to = "count",
-               values_to = "Anzahl") %>%
-  ggplot(aes(x = Datum,
-             y = Anzahl,
-             color = Bundesland,
-             group = Bundesland)) +
-  geom_line() +
-  scale_color_manual(values = colors) +
-  labs(title = "Tägliche und kumulierte Covid-19 Fälle nach Bevölkerung je Bundesland",
-       y = "Anzahl",
-       caption = paste0("Einwohner: Destatis 2018 | Covid-19: RKI ", 
-                        format(Sys.Date(), "%d.%m.%Y"))) +
-  facet_wrap(forcats::fct_relevel(Messwert, "Neuinfektionen") ~count, scales = "free_y", ncol = 2) +
-  theme_light()
-ggsave("plot.jpg", plot = plot,
-       width = 12, height = 12)
+# Tabelle mit neuen Infektionen in absoluten Zahlen
+c19_tag_abs <- RKI_COVID19 %>%
+  group_by(Bundesland, Meldedatum) %>%
+  filter(NeuerFall >= 0) %>%
+  summarise(faelle = sum(AnzahlFall)) %>%
+  complete(Meldedatum = seq(min(Meldedatum), max(Meldedatum), "day"),
+           fill = list(faelle = 0)) %>%
+  pivot_wider(names_from = Bundesland, values_from = faelle) %>%
+  arrange(Meldedatum) %>%
+  mutate(Gesamt = rowSums(.[-1], na.rm = T),
+         Meldedatum = as.character(Meldedatum))
 
-# Sommerferienzeiten in Abhängigkeit zu Neuinfektionen
-ferien <- tibble(Bundesland = unique(history$Bundesland),
-                 Begin = as.Date(c("2020-07-30",
-                                   "2020-07-27",
-                                   "2020-06-25",
-                                   "2020-06-25",
-                                   "2020-07-16",
-                                   "2020-06-25",
-                                   "2020-07-06",
-                                   "2020-06-22",
-                                   "2020-07-16",
-                                   "2020-06-29",
-                                   "2020-07-06",
-                                   "2020-07-06",
-                                   "2020-07-20",
-                                   "2020-07-16",
-                                   "2020-06-29",
-                                   "2020-07-20")),
-                 Ende = as.Date(c("2020-09-12",
-                                  "2020-09-07",
-                                  "2020-08-07",
-                                  "2020-08-07",
-                                  "2020-08-26",
-                                  "2020-08-05",
-                                  "2020-08-14",
-                                  "2020-08-01",
-                                  "2020-08-26",
-                                  "2020-08-11",
-                                  "2020-08-14",
-                                  "2020-08-14",
-                                  "2020-08-28",
-                                  "2020-08-26",
-                                  "2020-08-08",
-                                  "2020-08-29")))
-plot2 <- history %>%
-  group_by(Bundesland) %>%
-  mutate(neu = (Infizierte - lag(Infizierte , 7)) / 7) %>% 
-  ggplot(aes(x = Datum, y = neu, color = Bundesland)) +
-    geom_line() +
-    geom_rect(data = ferien,
-              inherit.aes = F,
-              aes(xmin = Begin,
-                  xmax = Ende,
-                  ymin = -Inf,
-                  ymax = Inf),
-              alpha = 0.3) +
-    facet_wrap(~Bundesland, scales = "free_y") +
-    labs(title = "Neuinfektionen nach Bundesland in Relation zu Sommerferien",
-         y = "7-Tage-Mittel der Neuinfektionen",
-         caption = paste0("Sommerferien: KMK | Covid-19: RKI ", 
-                          format(Sys.Date(), "%d.%m.%Y"))) +
-   scale_color_manual(values = colors, guide = F) +
-   theme_light()
+write_excel_csv2(c19_tag_abs,
+                 "corona_absolut.csv",
+                 na = "")
+#c19_tag_abs[nrow(c19_tag_abs),1] = "Gesamt"
 
-ggsave("plot2.jpg", plot = plot2,
-       width = 12, height = 10)
+
+# Tabelle mit neuen Fällen der letzen 7 Tage pro 100.000 Einwohner
+c19_woche_rel_gesamt <- RKI_COVID19 %>%
+  group_by(Meldedatum) %>%
+  filter(NeuerFall >= 0) %>%
+  summarise(faelle = sum(AnzahlFall)) %>%
+  complete(Meldedatum = seq(min(Meldedatum), max(Meldedatum), "day"),
+           fill = list(faelle = 0)) %>%
+  mutate(kum = cumsum(faelle),
+         woche = (kum - coalesce(lag(kum, 7), 0)),
+         Gesamt = woche / sum(zensus[1:16]))  %>%
+  select(Meldedatum, Gesamt)
+c19_woche_rel <- RKI_COVID19 %>%
+  group_by(Bundesland, Meldedatum) %>%
+  filter(NeuerFall >= 0) %>%
+  summarise(faelle = sum(AnzahlFall)) %>%
+  complete(Meldedatum = seq(min(Meldedatum), max(Meldedatum), "day"),
+           fill = list(faelle = 0)) %>%
+  mutate(kum = cumsum(faelle),
+         woche = (kum - coalesce(lag(kum, 7), 0)),
+         woche100k = woche / zensus[Bundesland])  %>%
+  select(-faelle, -kum, -woche) %>%
+  pivot_wider(names_from = Bundesland, values_from = woche100k) %>%
+  arrange(Meldedatum) %>%
+  left_join(c19_woche_rel_gesamt)
+
+write_excel_csv2(c19_woche_rel,
+                 "corona_relativ.csv",
+                 na = "")
+
+# Verlauf
+RKI_COVID19 %>%
+  group_by(Bundesland, Meldedatum) %>%
+  filter(NeuerFall >= 0) %>%
+  summarise(faelle = sum(AnzahlFall)) %>%
+  complete(Meldedatum = seq(min(Meldedatum), max(Meldedatum), "day"),
+           fill = list(faelle = 0)) %>%
+  mutate(kum = cumsum(faelle),
+         woche = (kum - coalesce(lag(kum, 7), 0)),
+         woche100k = woche / zensus[Bundesland])  %>%
+  ggplot(aes(x = Meldedatum, y = woche100k, fill = Bundesland)) +
+  geom_area(position = position_dodge(), alpha = 0.7, color = "white") +
+  scale_fill_viridis_d() +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_x_date(expand = c(0,0)) +
+  labs(title = "Fallzahlentwicklung nach Bundesländern",
+       subtitle = "pro 100.000 Einwohner",
+       y = "7 Tage Inzidenzrate",
+       caption = paste("Quelle: RKI | Stand:", format(Sys.Date(),
+                                                      "%d.%m.%Y"))) +
+  theme_classic() +
+  theme(legend.position = c(0.01,1),
+        legend.justification = c(0,1),
+        legend.background = element_rect(color = "black"),
+        panel.grid.major.y = element_line(linetype = "dashed", color = "gray"))
+
+ggsave(filename = "01_verlauf.png", width = 14, height = 6)
+
+# Altersverteilung
+RKI_COVID19 %>%
+  group_by(Altersgruppe, Geschlecht, Meldedatum) %>%
+  filter(NeuerFall >= 0) %>%
+  summarise(faelle = sum(AnzahlFall)) %>%
+  complete(Meldedatum = seq(min(Meldedatum), max(Meldedatum), "day"),
+           fill = list(faelle = 0)) %>%
+  mutate(kum = cumsum(faelle),
+         woche = (kum - coalesce(lag(kum, 7), 0))) %>%
+  filter(tolower(Geschlecht) != "unbekannt",
+         tolower(Altersgruppe) != "unbekannt",
+         woche > 10) %>%
+  ggplot(aes(x = Meldedatum, y = woche, fill = gsub("A", "", Altersgruppe))) +
+  facet_wrap(~factor(Geschlecht, levels = c("M", "W"), labels = c("männlich", "weiblich"))) +
+  geom_area(position = "fill") +
+  theme_classic() +
+  theme(legend.position = c(0.5,1),
+        legend.justification = c(0.5,1),
+        legend.key = element_rect(size = 3, color = "white"),
+        legend.key.height = unit(3.5, "lines"),
+        panel.spacing.x = unit(5, "lines")) +
+  scale_fill_viridis_d() +
+  scale_y_continuous(expand = c(0,0), labels = scales::percent) +
+  scale_x_date(expand = c(0,0)) +
+  labs(title = "Fallzahlentwicklung pro Woche",
+       subtitle = "Anteilig nach Altersgruppe und Geschlecht",
+       y = "Anteil an Fällen der letzten 7 Tage",
+       fill = "Alter",
+       caption = paste("Quelle: RKI | Stand:", format(Sys.Date(),
+                                                      "%d.%m.%Y")))
+
+ggsave(filename = "02_Alter_Geschlecht.png", width = 14, height = 6)
+
+
+# Hotspots im zeitlichen Verlauf
+RKI_COVID19 %>%
+  group_by(Landkreis, Meldedatum) %>%
+  filter(NeuerFall >= 0) %>%
+  summarise(faelle = sum(AnzahlFall)) %>%
+  complete(Meldedatum = seq(min(Meldedatum), max(Meldedatum), "day"),
+           fill = list(faelle = 0)) %>%
+  mutate(kum = cumsum(faelle),
+         woche = (kum - coalesce(lag(kum, 7), 0)),
+         woche100k = woche / zensus[Landkreis]) %>%
+  filter(woche100k > 50) %>%
+  ungroup() %>%
+  count(Meldedatum) %>%
+  right_join(c19_woche_rel_gesamt) %>%
+  replace_na(list(n = 0)) %>%
+  mutate(log_n = ifelse(log(n) == -Inf, 0, log(n))) %>%
+  ggplot(aes(x = Meldedatum, y = Gesamt, fill = log_n)) +
+  geom_col(width = 1) +
+  scale_fill_viridis_c(breaks = c(log(2), log(8),log(32) , log(128)),
+                       labels = c(2, 8, 32, 128)) +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_x_date(expand = c(0,0)) +
+  labs(title = "Anzahl der Hotspots in Abhängigkeit von Gesamtinfektionszahl",
+       subtitle = "Hotspots = Landkreis mit mehr als 50 Neuinfektionen pro 100.000 EW innerhalb einer Woche",
+       y = "7 Tage Inzidenz pro 100.000 EW",
+       fill = "Anzahl Hotspots",
+       caption = paste("Quelle: RKI | Stand:", format(Sys.Date(),
+                                                      "%d.%m.%Y"))) +
+  theme_classic() +
+  theme(legend.position = c(0.01,1),
+        legend.justification = c(0,1),
+        legend.background = element_rect(color = "black"),
+        panel.grid.major.y = element_line(color = "gray", linetype = "dashed"))
+
+ggsave(filename = "3_Hotspots.png", width = 14, height = 6)
+
+# Dispersion
+RKI_COVID19 %>%
+  group_by(Landkreis, Meldedatum) %>%
+  filter(NeuerFall >= 0) %>%
+  summarise(faelle = sum(AnzahlFall)) %>%
+  complete(Meldedatum = seq(min(Meldedatum), max(Meldedatum), "day"),
+           fill = list(faelle = 0)) %>%
+  mutate(kum = cumsum(faelle),
+         woche = (kum - coalesce(lag(kum, 7), 0)),
+         woche100k = woche / zensus[Landkreis]) %>%
+  filter(woche100k > 50) %>%
+  ungroup() %>%
+  count(Meldedatum) %>%
+  right_join(c19_woche_rel_gesamt) %>%
+  replace_na(list(n = 0)) %>%
+  mutate(dispersion = n / Gesamt,
+         monat = as.factor(lubridate::month(Meldedatum, label = T))) %>%
+  ggplot(aes(x = Gesamt, y = n,
+             color = monat,
+             shape = monat,
+             group = monat)) +
+  geom_point(size = 3) +
+  scale_shape_manual(values = sort(unique(as.factor(lubridate::month(RKI_COVID19$Meldedatum))))) +
+  stat_smooth(geom = "line", method = "loess", se = F, alpha = 0.8, show.legend = F) +
+  scale_color_viridis_d() +
+  labs(title = "Verteilungsfaktor im Infektionsverlauf",
+       subtitle = "Hotspots = Landkreis mit mehr als 50 Neuinfektionen pro 100.000 EW innerhalb einer Woche",
+       x = "7 Tage Inzidenz pro 100.000 EW",
+       y = "Anzahl Hotspots",
+       color = "Monat",
+       shape = "Monat",
+       caption = paste("Quelle: RKI | Stand:", format(Sys.Date(),
+                                                      "%d.%m.%Y"))) +
+  theme_classic() +
+  theme(legend.position = c(0.01,1),
+        legend.justification = c(0,1),
+        legend.background = element_rect(color = "black"),
+        panel.grid.major = element_line(linetype = 'dotted', color = 'gray'))
+
+ggsave(filename = "04_Dispersion.png", width = 14, height = 6)
+
+
