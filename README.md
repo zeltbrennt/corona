@@ -2,15 +2,15 @@
 Das Rohland-Koch Institut veröffentlicht seit Anfang März 2020 
 auf ihrer [Website](https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/Fallzahlen.html) tagesaktuell die Anzahl an bekannten Corona-infizierten, aufgeschlüsselt nach Bundesland.
 Diese Repo dient dazu, den Verlauf zu protokollieren, da zwar eine [Historie](https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/Situationsberichte/Gesamt.html) 
-in PDF Dokumenten erstellt, aber keine historiesierte CSV zur verfügung gestellt wird. Diese
+in PDF Dokumenten erstellt, aber keine historiesierte CSV zur verfügung gestellt wird. Das Gleiche gilt für das Datenhub, auch hier werden nur die täglich neu übermittelten Fälle gekennzeichnet, eine Historisierung findet jedoch nicht statt. Diese
 Lücke soll hier geschlossen werden.
 
-Seit dem 09.03.2020 verwendet das RKI elektronisch übermittelte Daten. Daher kann es zu unvollständigen Daten oder Abweichungen zu anderen Quellen kommen. Dadurch ändert sich auch der Tabellenaufbau der Seite. Die Tabelle wird daher seit dem 12.03.2020 als Dump gespeichert. 
+Die Abfrage auf das Datenhub erfolgt täglich 5:00 Uhr. Es wird eine CSV erstellt, die kummulierte Infektionen und Todesfälle je Bundesland historisiert, so wie sie das RKI täglich veröffentlicht. Gleichzeitig werden die zu Grunde liegenden Daten aufbereitet. In den zusätzlichen Tabellen werden also auch Fälle berücksichtigt, die dem RKI erst später bekannt werden.
 
-Die jeweils aktuelle Verlauf ist in der CSV im Hauptverzeichnis gespeichert. Aktualisierungen erfolgen um 23:30 Uhr, sodass de facto die Daten mit einem Tag Verzögerung hier eingetragen werden. Damit bleibt gewährleistet, dass alle Daten, die das RKI im Laufe des Tages veröffentlicht, im jeweiligen Datensatz berücksichtigt werden.
+![Verlauf](01_verlauf.png)
 
-Für die die Zahlen des *heutigen* Tages, bitte die Seite des RKI nutzen!
+![Alter und Geschlecht](02_Alter_Geschlecht.png)
 
-![Verlauf](plot.jpg)
+![Hotspots](03_Hotspots.png)
 
-![Sommerferien](plot2.jpg)
+![Dispersion](04_Dispersion.png)
