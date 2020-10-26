@@ -90,7 +90,7 @@ write_excel_csv2(c19_woche_rel,
                  na = "")
 
 # Verlauf
-RKI_COVID19 %>%
+verlauf <- RKI_COVID19 %>%
   group_by(Bundesland, Meldedatum) %>%
   filter(NeuerFall >= 0) %>%
   summarise(faelle = sum(AnzahlFall)) %>%
@@ -100,7 +100,7 @@ RKI_COVID19 %>%
          woche = (kum - coalesce(lag(kum, 7), 0)),
          woche100k = woche / zensus[Bundesland])  %>%
   ggplot(aes(x = Meldedatum, y = woche100k, fill = Bundesland)) +
-  geom_area(position = position_dodge(), alpha = 0.7, color = "white") +
+  geom_area(position = position_dodge(width = 0), alpha = 0.7, color = "white") +
   scale_fill_viridis_d() +
   scale_y_continuous(expand = c(0,0)) +
   scale_x_date(expand = c(0,0)) +
@@ -115,10 +115,10 @@ RKI_COVID19 %>%
         legend.background = element_rect(color = "black"),
         panel.grid.major.y = element_line(linetype = "dashed", color = "gray"))
 
-ggsave(filename = "01_verlauf.png", width = 14, height = 6)
+ggsave(verlauf, filename = "01_verlauf.png", width = 14, height = 6)
 
 # Altersverteilung
-RKI_COVID19 %>%
+alter <- RKI_COVID19 %>%
   group_by(Altersgruppe, Geschlecht, Meldedatum) %>%
   filter(NeuerFall >= 0) %>%
   summarise(faelle = sum(AnzahlFall)) %>%
@@ -148,11 +148,11 @@ RKI_COVID19 %>%
        caption = paste("Quelle: RKI | Stand:", format(Sys.Date(),
                                                       "%d.%m.%Y")))
 
-ggsave(filename = "02_Alter_Geschlecht.png", width = 14, height = 6)
+ggsave(alter, filename = "02_Alter_Geschlecht.png", width = 14, height = 6)
 
 
 # Hotspots im zeitlichen Verlauf
-RKI_COVID19 %>%
+hotspot <- RKI_COVID19 %>%
   group_by(Landkreis, Meldedatum) %>%
   filter(NeuerFall >= 0) %>%
   summarise(faelle = sum(AnzahlFall)) %>%
@@ -185,10 +185,10 @@ RKI_COVID19 %>%
         legend.background = element_rect(color = "black"),
         panel.grid.major.y = element_line(color = "gray", linetype = "dashed"))
 
-ggsave(filename = "3_Hotspots.png", width = 14, height = 6)
+ggsave(hotspot, filename = "03_Hotspots.png", width = 14, height = 6)
 
 # Dispersion
-RKI_COVID19 %>%
+dispersion <- RKI_COVID19 %>%
   group_by(Landkreis, Meldedatum) %>%
   filter(NeuerFall >= 0) %>%
   summarise(faelle = sum(AnzahlFall)) %>%
@@ -226,6 +226,6 @@ RKI_COVID19 %>%
         legend.background = element_rect(color = "black"),
         panel.grid.major = element_line(linetype = 'dotted', color = 'gray'))
 
-ggsave(filename = "04_Dispersion.png", width = 14, height = 6)
+ggsave(dispersion, filename = "04_Dispersion.png", width = 14, height = 6)
 
 
