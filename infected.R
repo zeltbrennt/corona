@@ -118,6 +118,34 @@ verlauf <- RKI_COVID19 %>%
 ggsave(verlauf, filename = "01_verlauf.png", width = 14, height = 6)
 
 # Altersverteilung
+sex_m <- paste0("männlich: ",
+            format(
+              round(
+                sum(RKI_COVID19$AnzahlFall[RKI_COVID19$Geschlecht == "M"]) / 
+                  sum(RKI_COVID19$AnzahlFall[RKI_COVID19$Geschlecht %in% c("M", "W")]), 
+                digits = 4) * 100, 
+              decimal.mark = ","), 
+            "%")
+sex_w <- paste0("weiblich: ",
+            format(
+              round(
+                sum(RKI_COVID19$AnzahlFall[RKI_COVID19$Geschlecht == "W"]) / 
+                  sum(RKI_COVID19$AnzahlFall[RKI_COVID19$Geschlecht %in% c("M", "W")]), 
+                digits = 4) * 100, 
+              decimal.mark = ","), 
+            "%")
+alter_label = c()
+for (a in unique(RKI_COVID19$Altersgruppe)) {
+  if (a != "unbekannt") {
+    alter_label = c(alter_label, paste0(gsub("A", "", a), "\n(", 
+                            format(
+                              round(
+                                sum(RKI_COVID19$AnzahlFall[RKI_COVID19$Altersgruppe == a]) /
+                                  sum(RKI_COVID19$AnzahlFall[RKI_COVID19$Altersgruppe != "unbekannt"]),
+                                digits = 4) * 100,
+                              decimal.mark = ","), "%)"))
+  }
+}
 alter <- RKI_COVID19 %>%
   group_by(Altersgruppe, Geschlecht, Meldedatum) %>%
   filter(NeuerFall >= 0) %>%
@@ -129,22 +157,22 @@ alter <- RKI_COVID19 %>%
   filter(tolower(Geschlecht) != "unbekannt",
          tolower(Altersgruppe) != "unbekannt",
          woche > 10) %>%
-  ggplot(aes(x = Meldedatum, y = woche, fill = gsub("A", "", Altersgruppe))) +
-  facet_wrap(~factor(Geschlecht, levels = c("M", "W"), labels = c("männlich", "weiblich"))) +
-  geom_area(position = "fill") +
+  ggplot(aes(x = Meldedatum, y = woche, fill = Altersgruppe)) +
+  facet_wrap(~factor(Geschlecht, levels = c("M", "W"), labels = c(sex_m, sex_w))) +
+  geom_col(position = "fill", width = 1) +
   theme_classic() +
   theme(legend.position = c(0.5,1),
         legend.justification = c(0.5,1),
         legend.key = element_rect(size = 3, color = "white"),
         legend.key.height = unit(3.5, "lines"),
         panel.spacing.x = unit(5, "lines")) +
-  scale_fill_viridis_d() +
+  scale_fill_viridis_d(label = alter_label) +
   scale_y_continuous(expand = c(0,0), labels = scales::percent) +
   scale_x_date(expand = c(0,0)) +
-  labs(title = "Fallzahlentwicklung pro Woche",
-       subtitle = "Anteilig nach Altersgruppe und Geschlecht",
-       y = "Anteil an Fällen der letzten 7 Tage",
-       fill = "Alter",
+  labs(title = "Geschlechts- und Altersverteilung",
+       subtitle = "Insgesamt und im Pandemieverlauf",
+       y = "Anteil an 7 Tage Inzidenz",
+       fill = "Altersgruppe",
        caption = paste("Quelle: RKI | Stand:", format(Sys.Date(),
                                                       "%d.%m.%Y")))
 
