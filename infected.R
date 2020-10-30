@@ -24,7 +24,7 @@ zensus <- read_csv("https://opendata.arcgis.com/datasets/917fc37a709542548cc3be0
   unlist()
 
 # Tabellen wegschreiben
-write.csv(RKI_COVID19, paste0("dump/", Sys.Date(), ".csv"))
+# write.csv(RKI_COVID19, paste0("dump/", Sys.Date(), ".csv"))
 
 new_data <- RKI_COVID19 %>% 
   group_by(Bundesland) %>% 
