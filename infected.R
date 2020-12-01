@@ -180,7 +180,7 @@ ggsave(alter, filename = "02_Alter_Geschlecht.png", width = 14, height = 6)
 
 
 # Hotspots im zeitlichen Verlauf
-hotspot <- RKI_COVID19 %>%
+landkreis <- RKI_COVID19 %>%
   group_by(Landkreis, Meldedatum) %>%
   filter(NeuerFall >= 0) %>%
   summarise(faelle = sum(AnzahlFall)) %>%
@@ -188,7 +188,9 @@ hotspot <- RKI_COVID19 %>%
            fill = list(faelle = 0)) %>%
   mutate(kum = cumsum(faelle),
          woche = (kum - coalesce(lag(kum, 7), 0)),
-         woche100k = woche / zensus[Landkreis]) %>%
+         woche100k = woche / zensus[Landkreis])
+
+hotspot <- landkreis %>%
   filter(woche100k > 50) %>%
   ungroup() %>%
   count(Meldedatum) %>%
@@ -216,15 +218,7 @@ hotspot <- RKI_COVID19 %>%
 ggsave(hotspot, filename = "03_Hotspots.png", width = 14, height = 6)
 
 # Dispersion
-dispersion <- RKI_COVID19 %>%
-  group_by(Landkreis, Meldedatum) %>%
-  filter(NeuerFall >= 0) %>%
-  summarise(faelle = sum(AnzahlFall)) %>%
-  complete(Meldedatum = seq(min(Meldedatum), max(Meldedatum), "day"),
-           fill = list(faelle = 0)) %>%
-  mutate(kum = cumsum(faelle),
-         woche = (kum - coalesce(lag(kum, 7), 0)),
-         woche100k = woche / zensus[Landkreis]) %>%
+dispersion <- landkreis %>%
   filter(woche100k > 50) %>%
   ungroup() %>%
   count(Meldedatum) %>%
@@ -256,4 +250,11 @@ dispersion <- RKI_COVID19 %>%
 
 ggsave(dispersion, filename = "04_Dispersion.png", width = 14, height = 6)
 
-
+landkreis %>%
+filter(Landkreis == "SK Dresden", 
+       Meldedatum >= lubridate::today() - 14) %>%
+  rename(Neuinfektionen = 'faelle',
+         `Fälle insgesamt` = 'kum',
+         `7 Tage Inzidenz` = 'woche',
+         `7 Tage Inzidenz pro 100.000 EW` = 'woche100k') %>%
+  write_csv("lage_dresden.csv")
