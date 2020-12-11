@@ -135,7 +135,7 @@ sex_w <- paste0("weiblich: ",
               decimal.mark = ","), 
             "%")
 alter_label = c()
-for (a in unique(RKI_COVID19$Altersgruppe)) {
+for (a in sort(unique(RKI_COVID19$Altersgruppe))) {
   if (a != "unbekannt") {
     alter_label = c(alter_label, paste0(gsub("A", "", a), "\n(", 
                             format(
@@ -165,7 +165,7 @@ alter <- RKI_COVID19 %>%
         legend.justification = c(0.5,1),
         legend.key = element_rect(size = 3, color = "white"),
         legend.key.height = unit(3.5, "lines"),
-        panel.spacing.x = unit(5, "lines")) +
+        panel.spacing.x = unit(5.5, "lines")) +
   scale_fill_viridis_d(label = alter_label) +
   scale_y_continuous(expand = c(0,0), labels = scales::percent) +
   scale_x_date(expand = c(0,0)) +
