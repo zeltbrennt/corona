@@ -226,6 +226,7 @@ dispersion <- landkreis %>%
   replace_na(list(n = 0)) %>%
   mutate(dispersion = n / Gesamt,
          monat = as.factor(lubridate::month(Meldedatum, label = T))) %>%
+  filter(lubridate::year(Meldedatum) == 2020) %>% 
   ggplot(aes(x = Gesamt, y = n,
              color = monat,
              shape = monat,
@@ -234,9 +235,9 @@ dispersion <- landkreis %>%
   scale_shape_manual(values = sort(unique(as.factor(lubridate::month(RKI_COVID19$Meldedatum))))) +
   stat_smooth(geom = "line", method = "loess", se = F, alpha = 0.8, show.legend = F) +
   scale_color_viridis_d() +
-  labs(title = "Verteilungsfaktor im Infektionsverlauf",
+  labs(title = "Verteilungsfaktor im Infektionsverlauf im Jahr 2020",
        subtitle = "Hotspots = Landkreis mit mehr als 50 Neuinfektionen pro 100.000 EW innerhalb einer Woche",
-       x = "7 Tage Inzidenz pro 100.000 EW",
+       x = "7 Tage Inzidenz pro 100.000 EW bundesweit",
        y = "Anzahl Hotspots",
        color = "Monat",
        shape = "Monat",
