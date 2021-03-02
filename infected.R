@@ -40,7 +40,6 @@ new_data <- RKI_COVID19 %>%
 
 file <- list.files(pattern = "RKI-.*\\.csv")
 file.copy(from = file, to = paste0("archive/", file))
-write_csv(new_data, paste0("RKI-", Sys.Date(), ".csv"))
 file.remove(file)
 
 
@@ -55,15 +54,16 @@ c19_woche_rel_gesamt <- new_data %>%
 
 c19_woche_rel <- new_data %>%
   mutate(woche = (Infizierte_gesamt - coalesce(lag(Infizierte_gesamt, 7), 0)),
-         woche100k = woche / zensus[Bundesland])  %>%
+         woche100k = woche / zensus[Bundesland])  %>% 
   select(c(Meldedatum, Bundesland, woche100k)) %>%
-  pivot_wider(names_from = Bundesland, values_from = woche100k) %>%
+  pivot_wider(names_from = Bundesland, values_from = woche100k) %>% 
   arrange(Meldedatum) %>%
   left_join(c19_woche_rel_gesamt) 
 
-write_excel_csv(c19_woche_rel,
+write_csv(c19_woche_rel,
                  "corona_relativ.csv",
                  na = "")
+write_csv(new_data, paste0("RKI-", Sys.Date(), ".csv"))
 
 # extrawunsch
 new_data %>% 
