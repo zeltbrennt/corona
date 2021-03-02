@@ -7,10 +7,9 @@ setwd("/home/pi/corona")
 
 # Neue Daten einlesen
 RKI_COVID19 <-  read_csv("https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.csv",
-                         col_types = cols(Altersgruppe2 = col_skip(),
-                                          Datenstand = col_date(format = "%d.%m.%Y, %H:%M Uhr"),
-                                          Meldedatum = col_date(format = "%Y/%m/%d %H:%M:%S"),
-                                          Refdatum = col_date(format = "%Y/%m/%d %H:%M:%S")))
+                         col_types = cols(Meldedatum = col_date(format = "%Y/%m/%d %H:%M:%S+00"), 
+                                          Datenstand = col_date(format = "%d.%m.%Y, %H:%M Uhr"), 
+                                          Refdatum = col_date(format = "%Y/%m/%d %H:%M:%S+00")))
 zensus <- read_csv("https://opendata.arcgis.com/datasets/917fc37a709542548cc3be077a786c17_0.csv",
                    col_types = cols(.default = col_skip(),
                                     BL = col_character(),
@@ -27,67 +26,51 @@ zensus <- read_csv("https://opendata.arcgis.com/datasets/917fc37a709542548cc3be0
 # write.csv(RKI_COVID19, paste0("dump/", Sys.Date(), ".csv"))
 
 new_data <- RKI_COVID19 %>% 
-  group_by(Bundesland) %>% 
-  summarise(Infizierte = sum(AnzahlFall)) %>% 
-  left_join(RKI_COVID19 %>% 
-              filter(NeuerTodesfall <= 0) %>% 
-              group_by(Bundesland) %>% 
-              summarise(Tote = sum(AnzahlTodesfall))) %>%
-  mutate(Datum = Sys.Date())
+  group_by(Bundesland, Meldedatum) %>% 
+  summarise(Infizierte = sum(AnzahlFall),
+            Tote = sum(AnzahlTodesfall)) %>% 
+  ungroup() %>%
+  complete(Meldedatum = seq(min(Meldedatum), max(Meldedatum), by = "day"),
+           Bundesland = sort(names(zensus[1:16])),
+           fill = list(Infizierte = 0,
+                       Tote = 0)) %>% 
+  group_by(Bundesland) %>%
+  mutate(Infizierte_gesamt = cumsum(Infizierte),
+         Tote_gesamt = cumsum(Tote)) 
 
 file <- list.files(pattern = "RKI-.*\\.csv")
 file.copy(from = file, to = paste0("archive/", file))
-history <- read_csv(file) %>%
-  bind_rows(new_data)  
-write_csv(history, paste0("RKI-", Sys.Date(), ".csv"))
+write_csv(new_data, paste0("RKI-", Sys.Date(), ".csv"))
 file.remove(file)
-
-# Tabelle mit neuen Infektionen in absoluten Zahlen
-c19_tag_abs <- RKI_COVID19 %>%
-  group_by(Bundesland, Meldedatum) %>%
-  filter(NeuerFall >= 0) %>%
-  summarise(faelle = sum(AnzahlFall)) %>%
-  complete(Meldedatum = seq(min(Meldedatum), max(Meldedatum), "day"),
-           fill = list(faelle = 0)) %>%
-  pivot_wider(names_from = Bundesland, values_from = faelle) %>%
-  arrange(Meldedatum) %>%
-  mutate(Gesamt = rowSums(.[-1], na.rm = T),
-         Meldedatum = as.character(Meldedatum))
-
-write_excel_csv2(c19_tag_abs,
-                 "corona_absolut.csv",
-                 na = "")
-#c19_tag_abs[nrow(c19_tag_abs),1] = "Gesamt"
 
 
 # Tabelle mit neuen Fällen der letzen 7 Tage pro 100.000 Einwohner
-c19_woche_rel_gesamt <- RKI_COVID19 %>%
+c19_woche_rel_gesamt <- new_data %>%
   group_by(Meldedatum) %>%
-  filter(NeuerFall >= 0) %>%
-  summarise(faelle = sum(AnzahlFall)) %>%
-  complete(Meldedatum = seq(min(Meldedatum), max(Meldedatum), "day"),
-           fill = list(faelle = 0)) %>%
+  summarise(faelle = sum(Infizierte)) %>%
   mutate(kum = cumsum(faelle),
          woche = (kum - coalesce(lag(kum, 7), 0)),
          Gesamt = woche / sum(zensus[1:16]))  %>%
   select(Meldedatum, Gesamt)
-c19_woche_rel <- RKI_COVID19 %>%
-  group_by(Bundesland, Meldedatum) %>%
-  filter(NeuerFall >= 0) %>%
-  summarise(faelle = sum(AnzahlFall)) %>%
-  complete(Meldedatum = seq(min(Meldedatum), max(Meldedatum), "day"),
-           fill = list(faelle = 0)) %>%
-  mutate(kum = cumsum(faelle),
-         woche = (kum - coalesce(lag(kum, 7), 0)),
+
+c19_woche_rel <- new_data %>%
+  mutate(woche = (Infizierte_gesamt - coalesce(lag(Infizierte_gesamt, 7), 0)),
          woche100k = woche / zensus[Bundesland])  %>%
-  select(-faelle, -kum, -woche) %>%
+  select(c(Meldedatum, Bundesland, woche100k)) %>%
   pivot_wider(names_from = Bundesland, values_from = woche100k) %>%
   arrange(Meldedatum) %>%
-  left_join(c19_woche_rel_gesamt)
+  left_join(c19_woche_rel_gesamt) 
 
-write_excel_csv2(c19_woche_rel,
+write_excel_csv(c19_woche_rel,
                  "corona_relativ.csv",
                  na = "")
+
+# extrawunsch
+new_data %>% 
+  pivot_longer(cols = -c(Meldedatum, Bundesland)) %>%
+  pivot_wider(names_from = Meldedatum, values_from = value) %>%
+  arrange(name, Bundesland) %>%
+  write_csv("pivot.csv")
 
 # Verlauf
 verlauf <- RKI_COVID19 %>%
@@ -259,3 +242,6 @@ filter(Landkreis == "SK Dresden",
          `7 Tage Inzidenz` = 'woche',
          `7 Tage Inzidenz pro 100.000 EW` = 'woche100k') %>%
   write_csv("lage_dresden.csv")
+
+
+
