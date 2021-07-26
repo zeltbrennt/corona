@@ -10,17 +10,21 @@ RKI_COVID19 <-  read_csv("https://www.arcgis.com/sharing/rest/content/items/f107
                          col_types = cols(Meldedatum = col_date(format = "%Y/%m/%d %H:%M:%S"), 
                                           Datenstand = col_date(format = "%d.%m.%Y, %H:%M Uhr"), 
                                           Refdatum = col_date(format = "%Y/%m/%d %H:%M:%S")))
-zensus <- read_csv("https://opendata.arcgis.com/datasets/917fc37a709542548cc3be077a786c17_0.csv",
-                   col_types = cols(.default = col_skip(),
-                                    BL = col_character(),
-                                    county = col_character(),
-                                    EWZ = col_integer(),
-                                    EWZ_BL = col_integer())) %>%
-  mutate_if(is.numeric, .funs = function(x) x / 100000) %>%
-  pivot_wider(names_from = BL, values_from = EWZ_BL) %>%
-  pivot_wider(names_from = county, values_from = EWZ) %>%
-  summarise_all(sum, na.rm = T) %>%
-  unlist()
+# zensus <- read_csv("https://opendata.arcgis.com/datasets/917fc37a709542548cc3be077a786c17_0.csv",
+#                    col_types = cols(.default = col_skip(),
+#                                     BL = col_character(),
+#                                     county = col_character(),
+#                                     EWZ = col_integer(),
+#                                     EWZ_BL = col_integer())) %>%
+#   mutate_if(is.numeric, .funs = function(x) x / 100000) %>%
+#   pivot_wider(names_from = BL, values_from = EWZ_BL) %>%
+#   pivot_wider(names_from = county, values_from = EWZ) %>%
+#   summarise_all(sum, na.rm = T) %>%
+#   unlist()
+# 
+# save(zensus, file = "zensus.RData")
+
+load("zensus.RData")
 
 # Tabellen wegschreiben
 # write.csv(RKI_COVID19, paste0("dump/", Sys.Date(), ".csv"))
