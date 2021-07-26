@@ -6,10 +6,10 @@ library(tidyr)
 setwd("/home/pi/corona")
 
 # Neue Daten einlesen
-RKI_COVID19 <-  read_csv("https://opendata.arcgis.com/datasets/dd4580c810204019a7b8eb3e0b329dd6_0.csv",
-                         col_types = cols(Meldedatum = col_date(format = "%Y/%m/%d %H:%M:%S+00"), 
+RKI_COVID19 <-  read_csv("https://www.arcgis.com/sharing/rest/content/items/f10774f1c63e40168479a1feb6c7ca74/data",
+                         col_types = cols(Meldedatum = col_date(format = "%Y/%m/%d %H:%M:%S"), 
                                           Datenstand = col_date(format = "%d.%m.%Y, %H:%M Uhr"), 
-                                          Refdatum = col_date(format = "%Y/%m/%d %H:%M:%S+00")))
+                                          Refdatum = col_date(format = "%Y/%m/%d %H:%M:%S")))
 zensus <- read_csv("https://opendata.arcgis.com/datasets/917fc37a709542548cc3be077a786c17_0.csv",
                    col_types = cols(.default = col_skip(),
                                     BL = col_character(),
