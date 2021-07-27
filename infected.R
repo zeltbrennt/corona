@@ -20,10 +20,11 @@ zensus <- read_csv("zensus.csv",
 
 # Neue Daten einlesen
 download.file("https://www.arcgis.com/sharing/rest/content/items/f10774f1c63e40168479a1feb6c7ca74/data", "RKI_COVID19.csv")
-new_data <-  read_csv("RKI_COVID19.csv", 
+RKI_COVID19 <-  read_csv("RKI_COVID19.csv", 
                          col_types = cols(Meldedatum = col_date(format = "%Y/%m/%d %H:%M:%S"), 
                                           Datenstand = col_date(format = "%d.%m.%Y, %H:%M Uhr"), 
-                                          Refdatum = col_date(format = "%Y/%m/%d %H:%M:%S"))) %>%
+                                          Refdatum = col_date(format = "%Y/%m/%d %H:%M:%S"))) 
+new_data <- RKI_COVID19 %>%
   group_by(Bundesland, Meldedatum) %>% 
   summarise(Infizierte = sum(AnzahlFall),
             Tote = sum(AnzahlTodesfall)) %>% 
