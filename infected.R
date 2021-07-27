@@ -5,6 +5,19 @@ library(tidyr)
 
 setwd("/home/pi/corona")
 
+#download.file("https://opendata.arcgis.com/datasets/917fc37a709542548cc3be077a786c17_0.csv", "zensus.csv")
+zensus <- read_csv("zensus.csv",
+                   col_types = cols(.default = col_skip(),
+                                    BL = col_character(),
+                                    county = col_character(),
+                                    EWZ = col_integer(),
+                                    EWZ_BL = col_integer())) %>%
+  mutate_if(is.numeric, .funs = function(x) x / 100000) %>%
+  pivot_wider(names_from = BL, values_from = EWZ_BL) %>%
+  pivot_wider(names_from = county, values_from = EWZ) %>%
+  summarise_all(sum, na.rm = T) %>%
+  unlist()
+
 # Neue Daten einlesen
 download.file("https://www.arcgis.com/sharing/rest/content/items/f10774f1c63e40168479a1feb6c7ca74/data", "RKI_COVID19.csv")
 new_data <-  read_csv("RKI_COVID19.csv", 
@@ -24,18 +37,6 @@ new_data <-  read_csv("RKI_COVID19.csv",
          Tote_gesamt = cumsum(Tote)) 
 
 
-#download.file("https://opendata.arcgis.com/datasets/917fc37a709542548cc3be077a786c17_0.csv", "zensus.csv")
-zensus <- read_csv("zensus.csv",
-                   col_types = cols(.default = col_skip(),
-                                    BL = col_character(),
-                                    county = col_character(),
-                                    EWZ = col_integer(),
-                                    EWZ_BL = col_integer())) %>%
-  mutate_if(is.numeric, .funs = function(x) x / 100000) %>%
-  pivot_wider(names_from = BL, values_from = EWZ_BL) %>%
-  pivot_wider(names_from = county, values_from = EWZ) %>%
-  summarise_all(sum, na.rm = T) %>%
-  unlist()
 
 #save(zensus, file = "zensus.RData")
 
