@@ -191,7 +191,7 @@ alter <- RKI_COVID19 %>%
 # cleanup WD
 rm(berlin, betten, ewz_lk, impf, RKI_COVID19, zensus)
 gc()
-file.remove("RKI_COVID19.csv")
+
 
 # Verlauf
 # to do: make this semi-3D (ggridges??)
@@ -254,7 +254,7 @@ if (interactive()) {
   }
   
   # don't start from scratch every time
-  start_here <- list.files(path = "images", pattern = paste0(language, "_copy")) %>% 
+  start_here <- list.files(path = file.path("images", language), pattern = paste0(language, "_copy")) %>% 
     tail(1) %>% 
     substr(6, 15) %>%
     as.Date() - 30
@@ -274,7 +274,9 @@ if (interactive()) {
     label_hosp =  "occupied beds in ICU"
     label_copy = "(c) /u/zeltbrennt | sources: RKI, DIVI, ESRI"
     intensiv <- intensiv %>%
-      mutate(name = ifelse(name == "Sonstige", "other", "Covid"))
+      mutate(name = case_when(name == "Sonstige" ~ "other",
+                              name == "Corona" ~ "Covid",
+                              TRUE ~ name))
     impfung <- impfung %>%
       mutate(BL = case_when(BL == "Niedersachsen"         ~ "Lower Saxony",
                             BL == "Nordrhein-Westfalen"   ~ "North Rhine-Westphalia",
@@ -295,6 +297,10 @@ if (interactive()) {
     label_vac_t = c("Impftatus nach Bundesland")
     label_hosp =  "Bettenbelegung in ITS"
     label_copy = "(c) /u/zeltbrennt | Quellen: RKI, DIVI, ESRI"
+    intensiv <- intensiv %>%
+      mutate(name = case_when(name == "other" ~ "Sonstige",
+                              name == "Covid" ~ "Corona",
+                              TRUE ~ name))
   } else {
     stop("Language??")
   }
@@ -418,28 +424,29 @@ if (interactive()) {
                                                  c(1,1,1,1,3,3,3,3),
                                                  c(1,1,1,1,4,4,4,4)))
       dev.off()
-      ggsave(paste0("images/grid_", day,"_",language,".png"), plot = grid, width = 10, height = 7, dpi = 72)
+      ggsave(file.path("images", language, paste0("grid_", day,"_",language,".png")), 
+             plot = grid, width = 10, height = 7, dpi = 72)
     }})
+  
+  rm(county_day, county_week, county_week_100k, impfung, intensiv, shp_forty, 
+     state_day, state_week_100k, tote_woche, verlauf_plot, alter_plot, alter)
+  gc()
+  
+  ### pull frames together into GIF
+  # add extra 4 seconds 
+  file.remove(list.files(path = file.path("images", language), pattern = "copy", full.names = T))
+  for (i in 1:40) {
+    file.copy(from= rev(list.files(path = file.path("images", language), pattern = "*.png", full.names = T))[1],
+              to = file.path("images", language, paste0("grid_", day, "_", language,"_copy_", i,".png")))
+  }
+  
+  system.time({list.files(file.path("images", language), full.names = TRUE) %>%
+      image_read() %>% 
+      image_join() %>% 
+      image_animate(fps=10) %>% 
+      image_write(paste0("corona_animated_",language,".gif"))
+  })
+  
+} else {
+  file.remove("RKI_COVID19.csv")
 }
-
-# another cleanup round
-rm(county_day, county_week, county_week_100k, impfung, intensiv, shp_forty, 
-   state_day, state_week_100k, tote_woche, verlauf_plot, alter_plot, alter)
-gc()
-
-### pull frames together into GIF
-# add extra 4 seconds 
-file.remove(list.files(path = "images", pattern = paste0(language, "_copy"), full.names = T))
-for (i in 1:40) {
-  file.copy(from= rev(list.files(path = "images/", pattern = paste0(language, "\\.png"), full.names = T))[1],
-            to = paste0("images/grid_", day, "_", language,"_copy_", i,".png"))
-}
-
-system.time({list.files("images/", pattern = language, full.names = TRUE) %>%
-    image_read() %>% 
-    image_join() %>% 
-    image_animate(fps=10) %>% 
-    image_write(paste0("corona_animated_",language,".gif"))
-})
-
-
