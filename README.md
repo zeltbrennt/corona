@@ -16,7 +16,7 @@ Montalich wird ein GIF animiert, welche mehrere Visualisierungen im Zeitverlauf 
 - die Impfquote nach Bundesländern[^4]
 - die Auslastung der Intensivstationen
 
-![Pandemie GIF](corona_animated_en.gif)
+![Pandemie GIF](corona_animated_de.gif)
 
 ![Verlauf](01_verlauf.png)
 
