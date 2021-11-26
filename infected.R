@@ -3,8 +3,7 @@ library(dplyr)
 library(ggplot2)
 library(tidyr)
 library(lubridate)
-library(gridExtra)
-library(magick)
+
 
 setwd("/home/pi/corona")
 # Download Data #####
@@ -248,6 +247,8 @@ state_day %>%
 
 ## animated gif of pandemic, only executed on demand ####
 if (interactive()) {
+  library(gridExtra)
+  library(magick)
   language = ""
   while (!(language %in% c("en", "de"))) {
     language <- readline("Language of labels? Type 'en' for englisch, 'de' for german: ") 
