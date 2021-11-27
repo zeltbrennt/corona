@@ -194,22 +194,17 @@ gc()
 
 # Verlauf
 # to do: make this semi-3D (ggridges??)
-verlauf_plot <- state_week_100k  %>%
-  ggplot(aes(x = Meldedatum, y = infizierte_woche100k, fill = Bundesland)) +
-  geom_area(position = position_dodge(width = 0), alpha = 0.7, color = "white") +
-  scale_fill_viridis_d() +
-  scale_y_continuous(expand = c(0,0)) +
-  scale_x_date(expand = c(0,0)) +
-  labs(title = "Fallzahlentwicklung nach Bundesländern",
+verlauf_plot <- state_week_100k %>%
+  ggplot(aes(y = forcats::fct_rev(Bundesland), x = Meldedatum, height = infizierte_woche100k, fill = Bundesland)) +
+  geom_density_ridges(stat = "identity", alpha = 0.5) +
+  scale_fill_viridis_d(option = "H") +
+  labs(title = "7-Tage Inzidenz nach Bundesländern",
        subtitle = "pro 100.000 Einwohner",
-       y = "7 Tage Inzidenzrate",
        caption = paste("Quelle: RKI | Stand:", format(Sys.Date(),
                                                       "%d.%m.%Y"))) +
-  theme_classic() +
-  theme(legend.position = c(0.01,1),
-        legend.justification = c(0,1),
-        legend.background = element_rect(color = "black"),
-        panel.grid.major.y = element_line(linetype = "dashed", color = "gray"))
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.title.y = element_blank())
 
 ggsave(verlauf_plot, filename = "01_verlauf.png", width = 14, height = 6)
 
@@ -448,6 +443,4 @@ if (interactive()) {
       image_write(paste0("corona_animated_",language,".gif"))
   })
   
-} else {
-  file.remove("RKI_COVID19.csv")
-}
+} else 
