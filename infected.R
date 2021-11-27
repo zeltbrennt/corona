@@ -16,7 +16,8 @@ if (!file.exists("zensus.csv")) {
 zensus <- read_csv("zensus.csv" )
 
 # Shapefiles
-if (!file.exists("Kreisgrenzen_2019.shp")) {
+if (interactive()) {
+  if (!file.exists("Kreisgrenzen_2019.shp")) {
   library(httr)
   GET("https://opendata.arcgis.com/api/v3/datasets/248e105774144a27aca2dfbfe080fc9d_0/downloads/data?format=shp&spatialRefId=4326") %>%
     content() %>%
@@ -25,21 +26,24 @@ if (!file.exists("Kreisgrenzen_2019.shp")) {
 }
 shp_forty <- rgdal::readOGR(dsn = "Kreisgrenzen_2019.shp", stringsAsFactors = F)  %>%
   broom::tidy(shp, region = "RS")
+}
 
 ## Dynamic Data #####
 # Vaccines
-if (!file.exists("impfungen.csv") | Sys.Date() - as.Date(file.info("impfungen.csv")$mtime) >= 1) {
-  download.file("https://raw.githubusercontent.com/robert-koch-institut/COVID-19-Impfungen_in_Deutschland/master/Aktuell_Deutschland_Bundeslaender_COVID-19-Impfungen.csv",
-                "impfungen.csv")
+if (interactive()) {
+  if (!file.exists("impfungen.csv") | Sys.Date() - as.Date(file.info("impfungen.csv")$mtime) >= 1) {
+    download.file("https://raw.githubusercontent.com/robert-koch-institut/COVID-19-Impfungen_in_Deutschland/master/Aktuell_Deutschland_Bundeslaender_COVID-19-Impfungen.csv",
+                  "impfungen.csv")
+  }
+  impf <- read_csv("impfungen.csv")
+  
+  # ICU
+  if (!file.exists("its_betten.csv") | Sys.Date() - as.Date(file.info("its_betten.csv")$mtime) >= 1) {
+    download.file("https://diviexchange.blob.core.windows.net/%24web/zeitreihe-deutschland.csv",
+                  "its_betten.csv")
+  }
+  betten <- read_csv("its_betten.csv")
 }
-impf <- read_csv("impfungen.csv")
-
-# ICU
-if (!file.exists("its_betten.csv") | Sys.Date() - as.Date(file.info("its_betten.csv")$mtime) >= 1) {
-  download.file("https://diviexchange.blob.core.windows.net/%24web/zeitreihe-deutschland.csv",
-                "its_betten.csv")
-}
-betten <- read_csv("its_betten.csv")
 
 # Covid Incideces and deaths
 if (!file.exists("RKI_COVID19.csv") | Sys.Date() - as.Date(file.info("RKI_COVID19.csv")$mtime) >= 1) {
@@ -72,81 +76,85 @@ state_week_100k <- state_day %>%
          infizierte_woche100k = infiziert_woche / (EWZ_BL / 100000)) 
 
 ## by county ####
-county_day <- RKI_COVID19 %>%
-  group_by(IdLandkreis, Meldedatum) %>%
-  summarise(Infizierte = sum(AnzahlFall),
-            Tote = sum(AnzahlTodesfall)) %>%
-  ungroup() %>%
-  complete(Meldedatum = seq(min(Meldedatum), max(Meldedatum), by = "day"),
-           IdLandkreis = sort(unique(IdLandkreis)),
-           fill = list(Infizierte = 0,
-                       Tote = 0)) %>%
-  group_by(IdLandkreis) %>%
-  mutate(Infizierte_kum = cumsum(Infizierte),
-         Tote_kum = cumsum(Tote))
-
-# summarise berlin as a city
-berlin <- county_day %>%
-  filter(substr(IdLandkreis, 1, 2) == "11") %>%
-  group_by(Meldedatum) %>%
-  summarise_if(is.numeric, sum) %>%
-  mutate(IdLandkreis = "11000")
-
-ewz_lk <- zensus %>%
-  select(RS, EWZ) %>%
-  filter(substr(RS, 1, 2) == "11") %>%
-  summarise(EWZ = sum(EWZ)) %>%
-  mutate(RS = "11000") %>%
-  bind_rows(zensus %>% select(RS, EWZ) %>% filter(substr(RS, 1, 2) != "11"))
-
-county_week <- county_day %>%
-  filter(substr(IdLandkreis, 1, 2) != "11") %>%
-  bind_rows(berlin) %>%
-  mutate(infiziert_woche = (Infizierte_kum - coalesce(lag(Infizierte_kum, 7), 0)), 
-         tote_woche = (Tote_kum - coalesce(lag(Tote_kum, 7), 0))) %>%
-  # add calender weeks for plot later. summarise last 2 days of 2020 into week 52
-  mutate(Kalenderwoche = (paste0(year(Meldedatum), stringr::str_pad(week(Meldedatum), 2, "left", "0"))),
-         Kalenderwoche = ifelse(Kalenderwoche == "202053", "202052", Kalenderwoche)) 
-
-county_week_100k <- county_week %>%
-  left_join(ewz_lk, by = c("IdLandkreis" = "RS")) %>%
-  mutate(infiziert_woche100k = infiziert_woche / (EWZ / 100000))  %>%
-  select(c(Meldedatum, IdLandkreis, infiziert_woche100k))
-
-tote_woche <- county_week %>%
-  group_by(Kalenderwoche) %>%
-  summarise(tote_kw = sum(Tote)) %>%
-  right_join(county_week) %>% 
-  distinct(Kalenderwoche, Meldedatum, tote_kw)
-
-impfung <- impf %>%
-  complete(Impfdatum = seq(min(county_week_100k$Meldedatum), max(county_week_100k$Meldedatum), by = "day"),
-           Impfserie = 1:3,
-           BundeslandId_Impfort = unique(sort(impf$BundeslandId_Impfort)),
-           Impfstoff = unique(sort(impf$Impfstoff)),
-           fill = list(Anzahl = 0)) %>%
-  group_by(Impfdatum, BundeslandId_Impfort, Impfserie) %>%
-  summarise(Anzahl = sum(Anzahl)) %>%
-  group_by(BundeslandId_Impfort, Impfserie) %>%
-  mutate(anz_kum = cumsum(Anzahl)) %>% 
-  left_join(zensus %>% distinct(BL, EWZ_BL, BL_ID) %>% mutate(BL_ID = stringr::str_pad(BL_ID, 2, "left", 0)), by = c("BundeslandId_Impfort" = "BL_ID")) %>%
-  drop_na() %>%
-  mutate(Impfquote = anz_kum / EWZ_BL) %>%
-  ungroup() %>%
-  select(BL, Impfquote, Impfserie, Impfdatum) 
-
-intensiv <- betten %>%
-  filter(Behandlungsgruppe == "ERWACHSENE",
-         Datum != min(Datum)) %>%
-  mutate(frei_quote = Freie_Intensivbetten / (Belegte_Intensivbetten + Freie_Intensivbetten),
-         Corona = Aktuelle_COVID_Faelle_ITS / (Belegte_Intensivbetten + Freie_Intensivbetten),
-         Sonstige = (Belegte_Intensivbetten - Aktuelle_COVID_Faelle_ITS) / (Belegte_Intensivbetten + Freie_Intensivbetten),
-         Datum = as.Date(Datum)) %>%
-  pivot_longer(cols = c(Sonstige, Corona)) %>%
-  select(Datum, name, value) %>% 
-  complete(Datum = seq(min(county_week_100k$Meldedatum), max(county_week_100k$Meldedatum), by = "day"),
-           name = c("Sonstige", "Corona"))
-
+if (interactive()) {
+  county_day <- RKI_COVID19 %>%
+    group_by(IdLandkreis, Meldedatum) %>%
+    summarise(Infizierte = sum(AnzahlFall),
+              Tote = sum(AnzahlTodesfall)) %>%
+    ungroup() %>%
+    complete(Meldedatum = seq(min(Meldedatum), max(Meldedatum), by = "day"),
+             IdLandkreis = sort(unique(IdLandkreis)),
+             fill = list(Infizierte = 0,
+                         Tote = 0)) %>%
+    group_by(IdLandkreis) %>%
+    mutate(Infizierte_kum = cumsum(Infizierte),
+           Tote_kum = cumsum(Tote))
+  
+  # summarise berlin as a city
+  berlin <- county_day %>%
+    filter(substr(IdLandkreis, 1, 2) == "11") %>%
+    group_by(Meldedatum) %>%
+    summarise_if(is.numeric, sum) %>%
+    mutate(IdLandkreis = "11000")
+  
+  ewz_lk <- zensus %>%
+    select(RS, EWZ) %>%
+    filter(substr(RS, 1, 2) == "11") %>%
+    summarise(EWZ = sum(EWZ)) %>%
+    mutate(RS = "11000") %>%
+    bind_rows(zensus %>% select(RS, EWZ) %>% filter(substr(RS, 1, 2) != "11"))
+  
+  county_week <- county_day %>%
+    filter(substr(IdLandkreis, 1, 2) != "11") %>%
+    bind_rows(berlin) %>%
+    mutate(infiziert_woche = (Infizierte_kum - coalesce(lag(Infizierte_kum, 7), 0)), 
+           tote_woche = (Tote_kum - coalesce(lag(Tote_kum, 7), 0))) %>%
+    # add calender weeks for plot later. summarise last 2 days of 2020 into week 52
+    mutate(Kalenderwoche = (paste0(year(Meldedatum), stringr::str_pad(week(Meldedatum), 2, "left", "0"))),
+           Kalenderwoche = ifelse(Kalenderwoche == "202053", "202052", Kalenderwoche)) 
+  
+  county_week_100k <- county_week %>%
+    left_join(ewz_lk, by = c("IdLandkreis" = "RS")) %>%
+    mutate(infiziert_woche100k = infiziert_woche / (EWZ / 100000))  %>%
+    select(c(Meldedatum, IdLandkreis, infiziert_woche100k))
+  
+  tote_woche <- county_week %>%
+    group_by(Kalenderwoche) %>%
+    summarise(tote_kw = sum(Tote)) %>%
+    right_join(county_week) %>% 
+    distinct(Kalenderwoche, Meldedatum, tote_kw)
+  
+  impfung <- impf %>%
+    complete(Impfdatum = seq(min(county_week_100k$Meldedatum), max(county_week_100k$Meldedatum), by = "day"),
+             Impfserie = 1:3,
+             BundeslandId_Impfort = unique(sort(impf$BundeslandId_Impfort)),
+             Impfstoff = unique(sort(impf$Impfstoff)),
+             fill = list(Anzahl = 0)) %>%
+    group_by(Impfdatum, BundeslandId_Impfort, Impfserie) %>%
+    summarise(Anzahl = sum(Anzahl)) %>%
+    group_by(BundeslandId_Impfort, Impfserie) %>%
+    mutate(anz_kum = cumsum(Anzahl)) %>% 
+    left_join(zensus %>% distinct(BL, EWZ_BL, BL_ID) %>% mutate(BL_ID = stringr::str_pad(BL_ID, 2, "left", 0)), by = c("BundeslandId_Impfort" = "BL_ID")) %>%
+    drop_na() %>%
+    mutate(Impfquote = anz_kum / EWZ_BL) %>%
+    ungroup() %>%
+    select(BL, Impfquote, Impfserie, Impfdatum) 
+  
+  intensiv <- betten %>%
+    filter(Behandlungsgruppe == "ERWACHSENE",
+           Datum != min(Datum)) %>%
+    mutate(Corona = Aktuelle_COVID_Faelle_ITS / (Belegte_Intensivbetten + Freie_Intensivbetten),
+           Sonstige = (Belegte_Intensivbetten - Aktuelle_COVID_Faelle_ITS) / (Belegte_Intensivbetten + Freie_Intensivbetten),
+           Datum = as.Date(Datum)) %>%
+    pivot_longer(cols = c(Sonstige, Corona)) %>%
+    select(Datum, name, value) %>% 
+    complete(Datum = seq(min(county_week_100k$Meldedatum), max(county_week_100k$Meldedatum), by = "day"),
+             name = c("Sonstige", "Corona")) %>%
+    group_by(name) %>%
+    mutate(betten_kum = cumsum(coalesce(value, 0)),
+           woche = (betten_kum - coalesce(lag(betten_kum, 7), 0)) / 7,
+           woche = ifelse(woche == 0, NA, woche))
+}
 ## by age #####
 sex_m <- paste0("männlich: ",
                 format(
@@ -188,9 +196,6 @@ alter <- RKI_COVID19 %>%
          woche > 10) 
 # Output #####
 # cleanup WD
-rm(berlin, betten, ewz_lk, impf, RKI_COVID19, zensus)
-gc()
-
 
 # Verlauf
 # to do: make this semi-3D (ggridges??)
@@ -391,7 +396,7 @@ if (interactive()) {
       
       plot3 <- intensiv %>%
         filter(Datum == day) %>% 
-        ggplot(aes(x = 1, y = value, fill = name)) +
+        ggplot(aes(x = 1, y = woche, fill = name)) +
         geom_col() +
         geom_label(aes(label = name, color = name), 
                    fill = "#FFFFFFDD", 
@@ -401,8 +406,8 @@ if (interactive()) {
         scale_y_continuous(label = scales::label_percent(),
                            limits = c(0, 1)) +
         labs(title = label_hosp) +
-        scale_fill_manual(name = "", values = c("#FB8861", "#51127C")) +
-        scale_color_manual(name = "", values = c("#FB8861", "#51127C")) +
+        scale_fill_manual(values = c("#FB8861", "#51127C")) +
+        scale_color_manual(values = c("#FB8861", "#51127C")) +
         theme_minimal() +
         theme(panel.grid.major.y = element_blank(),
               panel.grid.minor.y = element_blank(),
@@ -425,11 +430,7 @@ if (interactive()) {
       ggsave(file.path("images", language, paste0("grid_", day,"_",language,".png")), 
              plot = grid, width = 10, height = 7, dpi = 72)
     }})
-  
-  rm(county_day, county_week, county_week_100k, impfung, intensiv, shp_forty, 
-     state_day, state_week_100k, tote_woche, verlauf_plot, alter_plot, alter)
-  gc()
-  
+
   ### pull frames together into GIF
   # add extra 4 seconds 
   file.remove(list.files(path = file.path("images", language), pattern = "copy", full.names = T))
@@ -445,4 +446,4 @@ if (interactive()) {
       image_write(paste0("corona_animated_",language,".gif"))
   })
   
-} else 
+}  
