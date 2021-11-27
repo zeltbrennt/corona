@@ -195,9 +195,11 @@ gc()
 # Verlauf
 # to do: make this semi-3D (ggridges??)
 verlauf_plot <- state_week_100k %>%
-  ggplot(aes(y = forcats::fct_rev(Bundesland), x = Meldedatum, height = infizierte_woche100k, fill = Bundesland)) +
-  geom_density_ridges(stat = "identity", alpha = 0.5) +
+  ggplot(aes(y = forcats::fct_rev(Bundesland), x = Meldedatum, 
+             height = infizierte_woche100k, fill = Bundesland, color = Bundesland)) +
+  geom_density_ridges(stat = "identity", alpha = 0.5, ) +
   scale_fill_viridis_d(option = "H") +
+  scale_color_viridis_d(option = "H") +
   labs(title = "7-Tage Inzidenz nach Bundesländern",
        subtitle = "pro 100.000 Einwohner",
        caption = paste("Quelle: RKI | Stand:", format(Sys.Date(),
