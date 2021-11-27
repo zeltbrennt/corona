@@ -3,7 +3,7 @@ library(dplyr)
 library(ggplot2)
 library(tidyr)
 library(lubridate)
-
+library(ggridges)
 
 setwd("/home/pi/corona")
 # Download Data #####
