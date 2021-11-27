@@ -109,9 +109,8 @@ if (interactive()) {
     bind_rows(berlin) %>%
     mutate(infiziert_woche = (Infizierte_kum - coalesce(lag(Infizierte_kum, 7), 0)), 
            tote_woche = (Tote_kum - coalesce(lag(Tote_kum, 7), 0))) %>%
-    # add calender weeks for plot later. summarise last 2 days of 2020 into week 52
-    mutate(Kalenderwoche = (paste0(year(Meldedatum), stringr::str_pad(week(Meldedatum), 2, "left", "0"))),
-           Kalenderwoche = ifelse(Kalenderwoche == "202053", "202052", Kalenderwoche)) 
+    mutate(Kalenderwoche = (paste0(year(Meldedatum), stringr::str_pad(isoweek(Meldedatum), 2, "left", "0"))),
+           Kalenderwoche = ifelse(Kalenderwoche == "202153", "202053", Kalenderwoche)) 
   
   county_week_100k <- county_week %>%
     left_join(ewz_lk, by = c("IdLandkreis" = "RS")) %>%
@@ -122,6 +121,7 @@ if (interactive()) {
     group_by(Kalenderwoche) %>%
     summarise(tote_kw = sum(Tote)) %>%
     right_join(county_week) %>% 
+    mutate(Meldedatum = Meldedatum + 7) %>%
     distinct(Kalenderwoche, Meldedatum, tote_kw)
   
   impfung <- impf %>%
@@ -266,6 +266,7 @@ if (interactive()) {
   } 
   
   county_week_100k <- county_week_100k %>% filter(Meldedatum >= start_here)
+  tote_woche <- tote_woche %>% filter(Meldedatum >= "2020-02-20")
   
   # Create Labels for plots
   if (language == "en") {
@@ -316,12 +317,14 @@ if (interactive()) {
   # 4) occupied beds in ICU by type
   
   # pull these plots together into a grid, save to disk, load and animate
-  
+  if (readline(paste("Maximum incidence =",max(county_week_100k$infiziert_woche100k), "continue? (y/n) ")) != "y"){
+    stop("check breaks")
+  }
   system.time({
     m = n_distinct(county_week_100k$Meldedatum)
     n = 0
     for (day in as.character(unique(county_week_100k$Meldedatum))) {
-    #for (day in as.character(range(county_week_100k$Meldedatum))) { # debug
+      #for (day in as.character(range(county_week_100k$Meldedatum))) { # debug
       n = n + 1
       cat("Day:",day, "\tImage:\t", n, "/", m, "\n")
       map <- county_week_100k %>%
@@ -331,18 +334,18 @@ if (interactive()) {
         ggplot(aes(x = long, y = lat, group = group, fill = infiziert_woche100k)) +
         geom_polygon() +
         scale_fill_viridis_c(option = "A", direction = -1, name = label_inc, 
-                           limits = c(3.5, 2500),
-                           breaks = c(4, 8, 16, 32, 64, 128, 250, 500, 1000, 2000),
-                           trans = "log",
-                           guide = guide_colorbar(
-                             direction = "horizontal",
-                             barheight = unit(2, units = "mm"),
-                             barwidth = unit(100, units = "mm"),
-                             draw.ulim = FALSE,
-                             title.position = 'top',
-                             title.hjust = 0.5,
-                             title.vjust = 0.5
-                           )) + 
+                             limits = c(3.5, 2500),
+                             breaks = c(4, 8, 16, 32, 64, 128, 250, 500, 1000, 2000),
+                             trans = "log",
+                             guide = guide_colorbar(
+                               direction = "horizontal",
+                               barheight = unit(2, units = "mm"),
+                               barwidth = unit(100, units = "mm"),
+                               draw.ulim = FALSE,
+                               title.position = 'top',
+                               title.hjust = 0.5,
+                               title.vjust = 0.5
+                             )) + 
         scale_x_continuous(expand = c(0,0)) +
         scale_y_continuous(expand = c(0,0)) +
         theme_void() + 
@@ -361,7 +364,7 @@ if (interactive()) {
         distinct(Kalenderwoche, tote_kw) %>%
         ggplot(aes(x = Kalenderwoche, y = tote_kw)) +
         geom_col(width = 1, fill = "#000004FF") +
-        scale_y_continuous(limits = c(0, round(max(tote_woche$tote_kw), -3))) +
+        scale_y_continuous(limits = c(0, plyr::round_any(max(tote_woche$tote_kw), 1000, f = ceiling))) +
         theme_minimal() +
         theme(axis.text.x = element_blank(),
               axis.title.x = element_blank(),
@@ -429,7 +432,8 @@ if (interactive()) {
       dev.off()
       ggsave(file.path("images", language, paste0("grid_", day,"_",language,".png")), 
              plot = grid, width = 10, height = 7, dpi = 72)
-    }})
+    }
+  })
 
   ### pull frames together into GIF
   # add extra 4 seconds 
