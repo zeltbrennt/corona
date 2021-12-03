@@ -5,7 +5,6 @@ library(tidyr)
 library(lubridate)
 library(ggridges)
 
-setwd("/home/pi/corona")
 # Download Data #####
 ## Static Data #####
 # Population
