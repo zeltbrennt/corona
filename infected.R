@@ -250,17 +250,26 @@ state_day %>%
 if (interactive()) {
   library(gridExtra)
   library(magick)
-  language = ""
-  while (!(language %in% c("en", "de"))) {
-    language <- readline("Language of labels? Type 'en' for englisch, 'de' for german: ") 
+  lan = ""
+  limit_max = 3400
+  while (!(lan %in% c("en", "de"))) {
+    lan <- readline("lan of labels? Type 'en' for englisch, 'de' for german: ") 
   }
-  
+  if (max(county_week_100k$infiziert_woche100k) > limit_max) {
+    stop("Maximum Incidence is greater than Limit of colour scale!")
+  }
   # don't start from scratch every time
-  start_here <- list.files(path = file.path("images", language), pattern = paste0(language, "_copy")) %>% 
+  images_path <- file.path("images", lan)
+  start_here <- list.files(path = images_path, pattern = paste0(lan, "_copy")) %>% 
     tail(1) %>% 
     substr(6, 15) %>%
     as.Date() - 30
   if (length(start_here) == 0) {
+    if (dir.exists(images_path)) {
+      file.remove(list.files(path = images_path, full.names = T))
+    } else {
+      dir.create(images_path, recursive = T)
+    }
     start_here = as.Date("2020-02-20")
   } 
   
@@ -268,7 +277,7 @@ if (interactive()) {
   tote_woche <- tote_woche %>% filter(Meldedatum >= "2020-02-20")
   
   # Create Labels for plots
-  if (language == "en") {
+  if (lan == "en") {
     label_title = "Covid19-Pandemic in Germany since February 2020"
     label_inc =   "7-day incidence"
     label_death = "deaths per week"
@@ -285,14 +294,14 @@ if (interactive()) {
                             BL == "Nordrhein-Westfalen"   ~ "North Rhine-Westphalia",
                             BL == "Hessen"                ~ "Hesse", 
                             BL == "Rheinland-Pfalz"       ~ "Rhineland-Palatinate",
-                            BL == "Baden-W?rttemberg"     ~ "Baden-Wuerttemberg",
+                            BL == "Baden-Württemberg"     ~ "Baden-Wuerttemberg",
                             BL == "Bayern"                ~ "Bavaria",
                             BL == "Mecklenburg-Vorpommern"~ "Mecklenburg-Western Pomerania",
                             BL == "Sachsen"               ~ "Saxony",
                             BL == "Sachsen-Anhalt"        ~ "Saxony-Anhalt",
-                            BL == "Th?ringen"             ~ "Thuringia",
+                            BL == "Thüringen"             ~ "Thuringia",
                             TRUE ~ BL))
-  } else if (language == "de") {
+  } else if (lan == "de") {
     label_title = "Corona-Pandemie in Deutschland seit Februar 2020"
     label_inc =   "7-Tage Inzidenz"
     label_death = "Tote pro Woche"
@@ -316,9 +325,7 @@ if (interactive()) {
   # 4) occupied beds in ICU by type
   
   # pull these plots together into a grid, save to disk, load and animate
-  if (readline(paste("Maximum incidence =",max(county_week_100k$infiziert_woche100k), "continue? (y/n) ")) != "y"){
-    stop("check breaks")
-  }
+
   system.time({
     m = n_distinct(county_week_100k$Meldedatum)
     n = 0
@@ -333,8 +340,9 @@ if (interactive()) {
         ggplot(aes(x = long, y = lat, group = group, fill = infiziert_woche100k)) +
         geom_polygon() +
         scale_fill_viridis_c(option = "A", direction = -1, name = label_inc, 
-                             limits = c(3.5, 2500),
-                             breaks = c(4, 8, 16, 32, 64, 128, 250, 500, 1000, 2000),
+                             limits = c(4.5, 3400),
+                             breaks = c(5, 10, 20, 40, 80, 150, 300, 600, 1200, 2600),
+                             #breaks = c(5, 15, 45, 135, 400, 1200, 3400),
                              trans = "log",
                              guide = guide_colorbar(
                                direction = "horizontal",
@@ -352,7 +360,7 @@ if (interactive()) {
               plot.caption = element_text(color = "gray", size =7, hjust = 0),
               plot.caption.position = "plot") +
         labs(title = label_title, 
-             subtitle = ifelse(language == "en", 
+             subtitle = ifelse(lan == "en", 
                                paste("day:", format(as.Date(day), "%Y/%m/%d")),
                                paste("Tag:", format(as.Date(day), "%d.%m.%Y"))),
              caption = label_copy) +
@@ -429,24 +437,24 @@ if (interactive()) {
                                                  c(1,1,1,1,3,3,3,3),
                                                  c(1,1,1,1,4,4,4,4)))
       dev.off()
-      ggsave(file.path("images", language, paste0("grid_", day,"_",language,".png")), 
+      ggsave(file.path("images", lan, paste0("grid_", day,"_",lan,".png")), 
              plot = grid, width = 10, height = 7, dpi = 72)
     }
   })
 
   ### pull frames together into GIF
   # add extra 4 seconds 
-  file.remove(list.files(path = file.path("images", language), pattern = "copy", full.names = T))
+  file.remove(list.files(path = images_path, pattern = "copy", full.names = T))
   for (i in 1:40) {
-    file.copy(from= rev(list.files(path = file.path("images", language), pattern = "*.png", full.names = T))[1],
-              to = file.path("images", language, paste0("grid_", day, "_", language,"_copy_", i,".png")))
+    file.copy(from= rev(list.files(path = images_path, pattern = "*.png", full.names = T))[1],
+              to = file.path("images", lan, paste0("grid_", day, "_", lan,"_copy_", i,".png")))
   }
   
-  system.time({list.files(file.path("images", language), full.names = TRUE) %>%
+  system.time({list.files(images_path, full.names = TRUE) %>%
       image_read() %>% 
       image_join() %>% 
       image_animate(fps=10) %>% 
-      image_write(paste0("corona_animated_",language,".gif"))
+      image_write(paste0("corona_animated_",lan,".gif"))
   })
   
 }  
