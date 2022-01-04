@@ -260,18 +260,26 @@ if (interactive()) {
   }
   # don't start from scratch every time
   images_path <- file.path("images", lan)
-  start_here <- list.files(path = images_path, pattern = paste0(lan, "_copy")) %>% 
-    tail(1) %>% 
-    substr(6, 15) %>%
-    as.Date() - 30
-  if (length(start_here) == 0) {
-    if (dir.exists(images_path)) {
-      file.remove(list.files(path = images_path, full.names = T))
-    } else {
-      dir.create(images_path, recursive = T)
+  
+  if (length(list.files(path = images_path)) > 0) {
+    a <- readline("Images found. Update? (y/n): ")
+    if (a == "y") {
+      start_here <- list.files(path = images_path, pattern = paste0(lan, "_copy")) %>% 
+        tail(1) %>% 
+        substr(6, 15) %>%
+        as.Date() - 30
+    } else if (a == "n") {
+      c <- readline("This will remove all images. Continue? (y/n): ")
+      if (c == "y") {
+        if (dir.exists(images_path)) {
+          file.remove(list.files(path = images_path, full.names = T))
+        } else {
+          dir.create(images_path, recursive = T)
+        }
+        start_here = as.Date("2020-02-20")
+      }
     }
-    start_here = as.Date("2020-02-20")
-  } 
+  }
   
   county_week_100k <- county_week_100k %>% filter(Meldedatum >= start_here)
   tote_woche <- tote_woche %>% filter(Meldedatum >= "2020-02-20")
