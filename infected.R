@@ -317,6 +317,10 @@ if (interactive()) {
     stop("Language??")
   }
   
+  tote_breaks = tote_woche %>% filter(Meldedatum == quarter(Meldedatum, type = "date_first")) %>%
+    mutate(label = ifelse(year(Meldedatum) != lag(year(Meldedatum)) | is.na(lag(Meldedatum)),
+                          paste0("Q", quarter(Meldedatum), "\n", year(Meldedatum)),
+                          paste0("Q", quarter(Meldedatum)))) 
   ### create single frames ####
   # create plots for each day: 
   # 1) 7-day incidence map my county
@@ -371,13 +375,16 @@ if (interactive()) {
         distinct(Kalenderwoche, tote_kw) %>%
         ggplot(aes(x = Kalenderwoche, y = tote_kw)) +
         geom_col(width = 1, fill = "#000004FF") +
-        scale_y_continuous(limits = c(0, plyr::round_any(max(tote_woche$tote_kw), 1000, f = ceiling))) +
+        scale_y_continuous(limits = c(0, plyr::round_any(max(tote_woche$tote_kw), 1000, f = ceiling)),
+                           expand = c(0,0)) +
+        scale_x_discrete(breaks = tote_breaks$Kalenderwoche,
+                         labels = tote_breaks$label) +
         theme_minimal() +
-        theme(axis.text.x = element_blank(),
-              axis.title.x = element_blank(),
+        theme(axis.title.x = element_blank(),
               panel.grid.major.x = element_blank(),
               panel.grid.minor.x = element_blank()) +
         labs(y = label_death)
+      
       
       plot2 <- impfung %>%
         filter(Impfdatum == day) %>%
@@ -441,7 +448,8 @@ if (interactive()) {
              plot = grid, width = 10, height = 7, dpi = 72)
     }
   })
-
+  ggsave(paste0("corona_", lan, ".png"),
+         plot = grid, width = 10, height = 7, dpi = 72)
   ### pull frames together into GIF
   # add extra 4 seconds 
   file.remove(list.files(path = images_path, pattern = "copy", full.names = T))
@@ -449,6 +457,7 @@ if (interactive()) {
     file.copy(from= rev(list.files(path = images_path, pattern = "*.png", full.names = T))[1],
               to = file.path("images", lan, paste0("grid_", day, "_", lan,"_copy_", i,".png")))
   }
+
   
   system.time({list.files(images_path, full.names = TRUE) %>%
       image_read() %>% 
