@@ -275,9 +275,11 @@ if (interactive()) {
         } else {
           dir.create(images_path, recursive = T)
         }
-        start_here = as.Date("2020-02-20")
       }
     }
+  } else {
+    if (!dir.exists(images_path)) dir.create(images_path, recursive = T)
+    start_here = as.Date("2020-02-20")
   }
   
   county_week_100k <- county_week_100k %>% filter(Meldedatum >= start_here)
