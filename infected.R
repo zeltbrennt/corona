@@ -108,8 +108,7 @@ if (interactive()) {
     bind_rows(berlin) %>%
     mutate(infiziert_woche = (Infizierte_kum - coalesce(lag(Infizierte_kum, 7), 0)), 
            tote_woche = (Tote_kum - coalesce(lag(Tote_kum, 7), 0))) %>%
-    mutate(Kalenderwoche = (paste0(year(Meldedatum), stringr::str_pad(isoweek(Meldedatum), 2, "left", "0"))),
-           Kalenderwoche = ifelse(Kalenderwoche == "202153", "202053", Kalenderwoche)) 
+    mutate(Kalenderwoche = (paste0(isoyear(Meldedatum), stringr::str_pad(isoweek(Meldedatum), 2, "left", "0")))) 
   
   county_week_100k <- county_week %>%
     left_join(ewz_lk, by = c("IdLandkreis" = "RS")) %>%
