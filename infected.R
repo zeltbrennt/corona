@@ -250,7 +250,7 @@ if (interactive()) {
   library(gridExtra)
   library(magick)
   lan = ""
-  limit_max = 3400
+  limit_max = 6000
   while (!(lan %in% c("en", "de"))) {
     lan <- readline("lan of labels? Type 'en' for englisch, 'de' for german: ") 
   }
@@ -353,8 +353,8 @@ if (interactive()) {
         ggplot(aes(x = long, y = lat, group = group, fill = infiziert_woche100k)) +
         geom_polygon() +
         scale_fill_viridis_c(option = "A", direction = -1, name = label_inc, 
-                             limits = c(4.5, 3400),
-                             breaks = c(5, 10, 20, 40, 80, 150, 300, 600, 1200, 2600),
+                             limits = c(4.5, 6000),
+                             breaks = c(5, 10, 20, 40, 80, 150, 300, 600, 1200, 2600, 5000),
                              #breaks = c(5, 15, 45, 135, 400, 1200, 3400),
                              trans = "log",
                              guide = guide_colorbar(
